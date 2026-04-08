@@ -629,13 +629,14 @@
   const LIKE_KEY = "dotdock_likes_v1";
 
   // ===== Firebase start =====
-  // Fill these from your Firebase project settings.
-  const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyAzad6VzuTM1dG1-R89mhkvmqewzad4JKI",
-    authDomain: "dot-dock.firebaseapp.com",
-    projectId: "dot-dock",
-    appId: "1:527797656709:web:291b4ba4b6c39972381dec"
+  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
+  const FIREBASE_CONFIG_BASE = {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    appId: ""
   };
+  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
   let fbApp = null;
   let fbAuth = null;
   let fbDb = null;
@@ -704,7 +705,9 @@
     trendsCacheDonut: "",
     trendsCacheConcentration: "—",
     liveUpdatesTimer: null,
-    autoFillGuard: false
+    autoFillGuard: false,
+    authEnabled: false,
+    authUser: null
   };
 
   // --------- Utilities ----------
@@ -728,6 +731,36 @@
   }
 
   // ===== Firebase start =====
+  function hydrateFirebaseConfig_() {
+    const globalCfg = (window && window.DOTDOCK_FIREBASE_CONFIG && typeof window.DOTDOCK_FIREBASE_CONFIG === "object")
+      ? window.DOTDOCK_FIREBASE_CONFIG
+      : {};
+
+    let localCfg = {};
+    try {
+      localCfg = {
+        apiKey: localStorage.getItem("dotdock_fb_apiKey") || "",
+        authDomain: localStorage.getItem("dotdock_fb_authDomain") || "",
+        projectId: localStorage.getItem("dotdock_fb_projectId") || "",
+        appId: localStorage.getItem("dotdock_fb_appId") || ""
+      };
+    } catch (e) {}
+
+    FIREBASE_CONFIG = {
+      ...FIREBASE_CONFIG_BASE,
+      ...localCfg,
+      ...globalCfg,
+      ...FIREBASE_CONFIG
+    };
+
+    try {
+      if (FIREBASE_CONFIG.apiKey) localStorage.setItem("dotdock_fb_apiKey", FIREBASE_CONFIG.apiKey);
+      if (FIREBASE_CONFIG.authDomain) localStorage.setItem("dotdock_fb_authDomain", FIREBASE_CONFIG.authDomain);
+      if (FIREBASE_CONFIG.projectId) localStorage.setItem("dotdock_fb_projectId", FIREBASE_CONFIG.projectId);
+      if (FIREBASE_CONFIG.appId) localStorage.setItem("dotdock_fb_appId", FIREBASE_CONFIG.appId);
+    } catch (e) {}
+  }
+
   function firebaseReady_() {
     return !!(window.firebase && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.appId);
   }
@@ -2110,9 +2143,20 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
     const likes = likeCount(item.id);
     const likeTitle = ENABLE_REMOTE_LIKES ? "Like" : "Like (saved in your browser)";
     const isNew = !!(state.newIds && state.newIds.has(String(item.id)));
+    const authLocked = !!state.authEnabled && !state.authUser;
 
     return `
-      <article data-card-id="${escapeHtml(item.id)}" data-new="${isNew ? "1" : "0"}" class="bg-white border ${isNew ? "border-red-200 ring-2 ring-red-100" : "border-gray-200"} rounded-lg p-4 shadow-sm hover:shadow transition">
+      <article data-card-id="${escapeHtml(item.id)}" data-new="${isNew ? "1" : "0"}" class="relative overflow-hidden bg-white border ${isNew ? "border-red-200 ring-2 ring-red-100" : "border-gray-200"} rounded-lg p-4 shadow-sm hover:shadow transition">
+        ${authLocked ? `<div class="absolute inset-0 z-20 bg-white/65 backdrop-blur-[2px] flex items-center justify-center p-4">
+          <div class="text-center max-w-xs">
+            <div class="text-sm font-semibold text-gray-800">Please sign in to view full report cards.</div>
+            <button type="button" data-action="auth_open" data-id="${escapeHtml(item.id)}"
+                    class="mt-2 px-3 py-1.5 text-xs font-semibold border border-gray-300 rounded bg-white hover:bg-gray-50">
+              Sign in to continue
+            </button>
+          </div>
+        </div>` : ""}
+        <div class="${authLocked ? "blur-[2px] select-none" : ""}">
         <div class="grid grid-cols-1 sm:grid-cols-[160px,1fr] gap-4">
           <div class="w-full">
             <div class="relative border border-gray-200 bg-white rounded group">
@@ -2228,6 +2272,7 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
               </div>
             </div>
           </div>
+        </div>
         </div>
 
       </article>
@@ -2909,14 +2954,19 @@ function setupNewPostsBtn_() {
     if (authModalBackdrop) authModalBackdrop.addEventListener("click", closeAuthModal_);
     if (authModalClose) authModalClose.addEventListener("click", closeAuthModal_);
 
+    hydrateFirebaseConfig_();
     const firebaseEnabled = initFirebase_();
+    state.authEnabled = !!firebaseEnabled;
     if (!firebaseEnabled) {
+      state.authUser = null;
       setAuthUiState_(null);
       if (authOpenModalBtn) authOpenModalBtn.disabled = true;
       if (authOpenModalBtn) authOpenModalBtn.title = "Set FIREBASE_CONFIG values to enable auth.";
     } else {
       fbAuth.onAuthStateChanged(async (user) => {
+        state.authUser = user || null;
         setAuthUiState_(user || null);
+        render();
         if (user) {
           try { await bootstrapUserDoc_(user); }
           catch (e) { console.warn("User bootstrap failed:", e); }
@@ -3940,6 +3990,16 @@ document.addEventListener("visibilitychange", () => {
       const action = btn.getAttribute("data-action");
       const id = btn.getAttribute("data-id");
       if (!id) return;
+      const authLocked = !!state.authEnabled && !state.authUser;
+
+      if (action === "auth_open") {
+        openAuthModal_();
+        return;
+      }
+      if (authLocked) {
+        openAuthModal_();
+        return;
+      }
 
       const item = state.allItems.find(x => String(x.id) === String(id));
 

@@ -84,6 +84,12 @@
 
               <!-- Top menu -->
               <div class="flex flex-col items-end gap-1">
+                <div id="authHeaderBox" class="w-full flex flex-wrap items-center justify-end gap-2 text-[11px] text-gray-600 mb-1">
+                  <span id="authStatusText" class="hidden px-2 py-1 rounded-full border border-gray-200 bg-white"></span>
+                  <button id="authOpenModalBtn" type="button" class="px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Sign in</button>
+                  <button id="authLogoutBtn" type="button" class="hidden px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Logout</button>
+                </div>
+
                 <nav class="flex items-center gap-5 text-sm font-medium text-gray-700">
                   <a id="navHome" href="index.html" class="hover:text-amber-700">Home</a>
                   <a id="navToday" href="index.html?tab=today" class="hover:text-amber-700">Added Today</a>
@@ -419,7 +425,7 @@
   <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm px-4 py-2 rounded shadow-lg"></div>
 
   <!-- Sticky Search Dock (desktop): appears after scrolling past the main search -->
-  <div id="stickySearchDock" class="hidden md:hidden fixed top-20 right-4 z-[65]">
+  <div id="stickySearchDock" class="hidden md:hidden fixed top-28 right-4 z-[65]">
     <div class="bg-white/95 backdrop-blur border border-gray-200 rounded-full shadow-lg px-3 py-2 flex items-center gap-2">
       <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="7"></circle>
@@ -596,11 +602,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
-  <!-- Firebase (script-tag / compat build for static HTML) -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-
 <script>
   const DATA_URL = "https://script.google.com/macros/s/AKfycbxme0FmUWdOmNG5EVHKxkQkbm0alqCo6vWJgESo8SBzwIQunlTU0f9MdGlEqu2AqkQa/exec";
 
@@ -630,10 +631,10 @@
   // ===== Firebase start =====
   // Fill these from your Firebase project settings.
   const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyAzad6VzuTM1dG1-R89mhkvmqewzad4JKI",
-    authDomain: "dot-dock.firebaseapp.com",
-    projectId: "dot-dock",
-    appId: "1:527797656709:web:291b4ba4b6c39972381dec"
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    appId: ""
   };
   let fbApp = null;
   let fbAuth = null;
@@ -773,13 +774,15 @@
     if (user) {
       const label = user.displayName || user.email || "Signed in";
       statusEl.textContent = `Signed in: ${label}`;
+      statusEl.classList.remove("hidden");
       logoutBtn.classList.remove("hidden");
       openBtn.classList.add("hidden");
       if (authModal) authModal.classList.add("hidden");
       if (authErrorText) authErrorText.textContent = "";
       document.body.classList.remove("modal-open");
     } else {
-      statusEl.textContent = "Signed out";
+      statusEl.textContent = "";
+      statusEl.classList.add("hidden");
       logoutBtn.classList.add("hidden");
       openBtn.classList.remove("hidden");
     }

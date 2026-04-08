@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>dotdock — Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; }
+    .brand-title { font-family: 'Playfair Display', serif; letter-spacing: 0.03em; }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-3">
+      <div class="flex flex-col md:flex-row md:items-center gap-3">
+        <div class="flex items-center gap-4">
+          <a href="index.html" class="block" aria-label="Back to catalog">
+            <img src="logo.png" alt="dotdock logo"
+                 class="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover shadow-md border border-gray-200 bg-white">
+          </a>
+          <div>
+            <div class="flex items-baseline gap-3">
+              <div class="text-xl font-semibold text-gray-900 tracking-tight">dotdock</div>
+              <span class="text-xs text-gray-500 font-semibold uppercase tracking-[0.14em]">Viewer</span>
+            </div>
+            <p class="mt-1 text-amber-600 text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] not-italic">
+              Where report insights come together.
+            </p>
+          </div>
+        </div>
+
+        <div class="md:ml-auto flex flex-wrap gap-2 items-center">
+          <a href="index.html" class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">← Back to catalog</a>
+          <a id="openReport" class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50" href="#">Report page</a>
+          <button id="notebookBtn" class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">NotebookLM</button>
+          <button id="copyLink" class="px-3 py-1.5 text-sm bg-amber-600 text-white rounded hover:bg-amber-700">Copy link</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-2 md:px-4 py-3">
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm" style="height: calc(100vh - 88px);">
+      <iframe id="frame" class="w-full h-full" title="PDF viewer" loading="lazy"></iframe>
+    </div>
+  </main>
+
+  <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm px-4 py-2 rounded shadow-lg"></div>
+
+<script>
+  function qs(name){ return new URLSearchParams(location.search).get(name) || ""; }
+  function drivePreviewUrl(fileId){ return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`; }
+  function driveShareUrl(fileId){ return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view?usp=sharing`; }
+  function reportUrl(fileId, title){
+    const base = `report.html?id=${encodeURIComponent(fileId)}`;
+    return title ? `${base}&t=${encodeURIComponent(title)}` : base;
+  }
+  function showToast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.remove("hidden");
+    clearTimeout(showToast._to);
+    showToast._to = setTimeout(() => t.classList.add("hidden"), 2200);
+  }
+
+  const id = qs("id");
+  const titleHint = qs("t");
+  const frame = document.getElementById("frame");
+  const openReport = document.getElementById("openReport");
+  const copyBtn = document.getElementById("copyLink");
+  const notebookBtn = document.getElementById("notebookBtn");
+
+  if (!id) {
+    document.body.innerHTML = "<div class='p-6 text-red-700'>Missing id</div>";
+  } else {
+    frame.src = drivePreviewUrl(id);
+    openReport.href = reportUrl(id, titleHint);
+
+    if (titleHint) document.title = `dotdock — ${titleHint}`;
+  }
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(location.href.split("#")[0]);
+      copyBtn.textContent = "Copied!";
+      setTimeout(() => copyBtn.textContent = "Copy link", 1200);
+    } catch (e) {
+      showToast("Copy failed. You can copy from the address bar.");
+    }
+  });
+
+  notebookBtn.addEventListener("click", async () => {
+    const link = driveShareUrl(id);
+    try {
+      await navigator.clipboard.writeText(link);
+      window.open("https://notebooklm.google.com/", "_blank", "noopener");
+      showToast("Link copied. In NotebookLM: Add sources → Paste link.");
+    } catch {
+      window.open("https://notebooklm.google.com/", "_blank", "noopener");
+      showToast("Open NotebookLM and add this report link as a source.");
+    }
+  });
+</script>
+</body>
+</html>

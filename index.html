@@ -1,0 +1,3915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>dotdock — Connecting the dots for curious minds</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .brand-title { font-family: 'Playfair Display', serif; letter-spacing: 0.03em; }
+    .brand-tagline { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; }
+    /* Help dropdown */
+    .dd-shadow { box-shadow: 0 12px 30px rgba(0,0,0,0.10); }
+
+    /* Modal smooth */
+    .modal-anim { transform: translateY(6px); opacity: 0; transition: all .18s ease; }
+    .modal-open .modal-anim { transform: translateY(0); opacity: 1; }
+
+    /* Make sidebar scroll nicely on desktop */
+    @media (min-width: 768px) {
+      aside::-webkit-scrollbar { width: 10px; }
+      aside::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
+      aside::-webkit-scrollbar-track { background: transparent; }
+    }
+  
+    /* --- UX tweaks (2026-02) --- */
+    #stickySearchDock { transition: transform 180ms ease, opacity 180ms ease; transform: translateY(-6px); opacity: 0; }
+    #stickySearchDock.is-on { transform: translateY(0); opacity: 1; }
+    #searchSection { scroll-margin-top: 96px; }
+
+    /* Hide sticky UI while an overlay (PDF/Compare) is open */
+    body.dd-overlay-open #stickySearchDock,
+    body.dd-overlay-open #sidebarShowBtn {
+      display: none !important;
+    }
+
+    /* Skeleton loading for cards */
+    .dd-skeleton {
+      position: relative;
+      overflow: hidden;
+      background: #e5e7eb;
+      border-radius: 0.5rem;
+    }
+    .dd-skeleton::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+      animation: dd-shimmer 1.2s infinite;
+    }
+    @keyframes dd-shimmer {
+      100% { transform: translateX(100%); }
+    }
+
+</style>
+</head>
+
+<body class="bg-gray-50" id="top">
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+    <div class="max-w-[1600px] mx-auto px-4 py-4">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-4">
+          <a href="index.html" class="block" aria-label="Back to top">
+            <img src="logo.png"
+                 alt="dotdock logo"
+                 class="h-12 w-12 md:h-16 md:w-16 rounded-full object-cover shadow-md border border-gray-200 bg-white">
+          </a>
+
+          <div class="flex-1">
+            <div class="flex flex-col md:flex-row md:items-baseline md:justify-between gap-2">
+              <div>
+                <div class="text-2xl md:text-4xl font-semibold text-gray-900 tracking-tight leading-none">dotdock</div>
+                <p class="brand-tagline mt-2 text-amber-600 text-sm md:text-base font-semibold italic tracking-[0.02em]">
+                  Connecting the dots for curious minds
+                </p>
+             </div>
+
+              <!-- Top menu -->
+              <div class="flex flex-col items-end gap-1">
+                <nav class="flex items-center gap-5 text-sm font-medium text-gray-700">
+                  <a id="navHome" href="index.html" class="hover:text-amber-700">Home</a>
+                  <a id="navToday" href="index.html?tab=today" class="hover:text-amber-700">Added Today</a>
+
+                  <div class="relative">
+                    <button id="helpBtn" class="inline-flex items-center gap-1 hover:text-amber-700">
+                      Help
+                      <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/>
+                      </svg>
+                    </button>
+
+                    <div id="helpDropdown" class="hidden absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-lg dd-shadow overflow-hidden">
+                      <button data-openmodal="glossary" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Glossary</button>
+                      <button data-openmodal="faq" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">FAQ</button>
+                      <div class="border-t border-gray-200"></div>
+                      <button data-openmodal="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Submit a PDF</button>
+                    </div>
+                  </div>
+                </nav>
+
+                <!-- Live status badge -->
+                <div id="liveStatus" class="flex items-center gap-2 text-[11px] font-semibold text-gray-600">
+                  <span class="inline-flex items-center gap-2 px-2 py-1 rounded-full border border-gray-200 bg-white">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                    <span id="liveUpdatedText">Updated —</span>
+                  </span>
+
+                  <span id="liveNewText"
+                        class="hidden px-2 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-800 cursor-pointer hover:bg-amber-100">
+                    New: 0
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+  <!-- Main layout -->
+  <main class="max-w-[1600px] mx-auto px-4 py-4" id="top">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+
+      <!-- Sidebar -->
+      <aside id="sidebar" class="order-2 md:order-1 md:col-span-3 space-y-6 md:sticky md:top-28 self-start md:max-h-[calc(100vh-7rem)] md:overflow-auto md:pr-1">
+
+        <!-- Sidebar collapse (desktop) -->
+        <div class="hidden md:flex items-center justify-end -mt-1">
+          <button id="sidebarHideBtn" type="button"
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  aria-label="Hide sidebar">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 6H20"></path>
+              <path d="M10 12H20"></path>
+              <path d="M10 18H20"></path>
+              <path d="M6 6l-3 3 3 3"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Trends snapshot -->
+        <section id="trendsPanel" class="bg-white rounded-lg border border-gray-200 p-4">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-gray-700">What’s trending now</h2>
+            <div class="inline-flex rounded-md border border-gray-200 overflow-hidden text-[11px]">
+              <button id="trendsRangeToday" type="button" class="px-2 py-1 bg-amber-50 text-amber-700 font-semibold">Today</button>
+              <button id="trendsRange7d" type="button" class="px-2 py-1 bg-white text-gray-600">7D</button>
+            </div>
+          </div>
+          <div class="mt-2 flex items-center justify-between gap-3">
+            <span id="trendsScope" class="text-[11px] text-gray-500">Based on current view</span>
+            <div class="flex items-center gap-2">
+              <div id="trendsDonut" class="h-10 w-10 rounded-full border border-gray-200 bg-gray-100"></div>
+              <div id="trendsConcentration" class="text-[11px] text-gray-600">—</div>
+            </div>
+          </div>
+          <div id="trendsList" class="mt-3 space-y-2 text-sm text-gray-600">
+            Loading trends…
+          </div>
+        </section>
+
+        <!-- Live updates -->
+        <section id="liveUpdatesPanel" class="bg-white rounded-lg border border-gray-200 p-4">
+          <div class="flex items-center gap-2">
+            <span class="relative inline-flex h-3 w-3">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-70"></span>
+              <span class="relative inline-flex h-3 w-3 rounded-full border-2 border-rose-600 bg-white"></span>
+            </span>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-rose-700">Live updates</h2>
+          </div>
+          <div id="liveUpdatesList" class="mt-3 space-y-2 text-sm text-gray-700">
+            Loading live updates…
+          </div>
+        </section>
+
+        <!-- Filters -->
+        <section class="bg-white rounded-lg border border-gray-200 p-4">
+          <h2 class="text-sm font-semibold text-gray-700 mb-2">Filters</h2>
+
+          <div class="space-y-4">
+
+            <!-- Topics (auto from titles) -->
+            <div>
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-semibold text-gray-700">Topics</h3>
+                <button id="toggleTopics" class="text-xs font-semibold text-amber-700 hover:underline">Hide</button>
+              </div>
+              <div id="topicFilters" class="mt-2 text-sm max-h-56 overflow-y-auto grid grid-cols-2 gap-x-4 gap-y-1"></div>
+              </div>
+
+            <!-- Category filters -->
+            <div id="categoryFilterSection">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-semibold text-gray-700">Category</h3>
+                <button id="toggleCats" class="text-xs font-semibold text-amber-700 hover:underline">Show</button>
+              </div>
+              <div id="categoryFilters" class="hidden mt-2 space-y-1 text-sm max-h-56 overflow-y-auto"></div>
+            </div>
+
+            <!-- Year filters -->
+            <div>
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-semibold text-gray-700">Year</h3>
+                <button id="toggleYears" class="text-xs font-semibold text-amber-700 hover:underline">Show</button>
+              </div>
+              <div id="yearFilters" class="hidden mt-2 space-y-1 text-sm max-h-56 overflow-y-auto"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Newsletter -->
+        <section class="bg-white rounded-lg border border-gray-200 p-4">
+          <button id="newsletterBtn" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md border border-blue-300 text-blue-700 font-semibold hover:bg-blue-50">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 4h16v16H4z" opacity="0"/>
+              <path d="M4 4h16v16H4z"/>
+              <path d="M22 6l-10 7L2 6"/>
+            </svg>
+            <span>Join the free newsletter</span>
+          </button>
+          <div class="mt-2 text-[11px] text-gray-500">We’ll set the signup link later.</div>
+        </section>
+
+        <!-- Refresh list -->
+        <section class="bg-white rounded-lg border border-gray-200 p-4">
+          <button id="userRefreshBtn"
+                  class="w-full px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+            Refresh list
+          </button>
+          <div id="userRefreshStatus" class="text-xs text-gray-500 mt-2"></div>
+        </section>
+
+        <!-- Reading list -->
+        <section class="bg-white rounded-lg border border-gray-200 p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-700">Reading list</h2>
+            <button id="toggleReadingList"
+                    class="text-xs font-semibold text-amber-700 hover:underline">
+              Show
+            </button>
+          </div>
+
+          <div id="readingListEmpty" class="text-xs text-gray-500 mt-2">
+            No items yet. Click “Add to reading list” on any card.
+          </div>
+
+          <div id="readingListWrap" class="hidden mt-3 space-y-2"></div>
+
+          <div class="mt-3 flex gap-2">
+            <button id="clearReadingListBtn"
+                    class="px-3 py-1.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">
+              Clear list
+            </button>
+          </div>
+        </section>
+
+        <!-- Search and compare -->
+        <section class="bg-white rounded-lg border border-gray-200 p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-700">Search and compare</h2>
+            <button id="clearCompareBtn" class="text-xs font-semibold text-amber-700 hover:underline">Clear</button>
+          </div>
+          <div class="text-xs text-gray-500 mt-1">Pick 1 left + 1 right report to compare side-by-side.</div>
+
+          <div class="mt-3 space-y-3">
+            <div class="relative">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Left</label>
+              <input id="compareSearchLeft" type="text" autocomplete="off"
+                     class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                     placeholder="Search left report…" />
+              <div id="compareSuggestLeft" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50"></div>
+            </div>
+            <div class="relative">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Right</label>
+              <input id="compareSearchRight" type="text" autocomplete="off"
+                     class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                     placeholder="Search right report…" />
+              <div id="compareSuggestRight" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50"></div>
+            </div>
+          </div>
+
+          <div id="compareWrap" class="mt-3 space-y-2"></div>
+
+          <a id="openCompareBtn"
+             class="hidden mt-3 w-full text-center block px-3 py-2 text-sm font-semibold bg-amber-600 text-white rounded hover:bg-amber-700"
+             href="#">
+            Compare
+          </a>
+        </section>
+
+        <!-- My workspace (filters + export) -->
+        <section class="bg-white rounded-lg border border-gray-200 p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-700">My workspace</h2>
+          </div>
+
+          <label class="block text-xs text-gray-600 mt-3">Status filter</label>
+          <select id="wsStatusFilter" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white">
+            <option value="all">All</option>
+            <option value="unread">Unread</option>
+            <option value="reading">Reading</option>
+            <option value="done">Done</option>
+          </select>
+
+          <label class="block text-xs text-gray-600 mt-3">Tag filter</label>
+          <input id="wsTagFilter" type="text"
+                 class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                 placeholder="e.g., energy, tpm" />
+
+          <button id="exportWorkspaceBtn"
+                  class="mt-3 w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
+            Export my workspace
+          </button>
+
+          <div class="text-[11px] text-gray-500 mt-2">
+            Saved locally in your browser (no login).
+          </div>
+        </section>
+
+        <!-- Clear filters -->
+        <button id="clearFilters"
+                class="w-full text-sm border border-gray-300 rounded-md py-1.5 bg-white hover:bg-gray-50">
+          Clear all filters
+        </button>
+      </aside>
+
+      <!-- Catalogue -->
+      <section id="catalogue" class="order-1 md:order-2 md:col-span-9">
+    <!-- Top search -->
+    <section id="searchSection" class="mb-4">
+      <div class="bg-white border border-gray-200 rounded-lg p-3 md:p-4 shadow-sm">
+        <div>
+          <div id="searchWrap" class="relative">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-white border border-gray-300 rounded-xl px-5 py-3 shadow-sm focus-within:ring-2 focus-within:ring-amber-200">
+            <div class="flex items-center gap-3 w-full">
+            <svg class="h-5 w-5 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="M21 21l-4.3-4.3"></path>
+            </svg>
+            <input id="searchInput" type="text"
+                   class="w-full outline-none text-base md:text-lg"
+                   placeholder="Search reports by title or summary… (try: AI + Education)" />
+            <button id="searchClearBtn" type="button" aria-label="Clear search"
+                    class="hidden shrink-0 p-2 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100">
+              &#10005;
+            </button>
+            </div>
+            <div class="flex items-center gap-2 justify-end sm:justify-start">
+            <button id="aiModeBtn" type="button" aria-pressed="false"
+                    class="shrink-0 px-3 py-2 text-xs font-semibold rounded-full border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">
+              AI Mode
+            </button>
+            <button id="searchBtn"
+                    class="shrink-0 px-5 py-2 text-sm font-semibold uppercase tracking-wide bg-amber-600 text-white rounded-full hover:bg-amber-700">
+              Search
+            </button>
+          </div>
+          </div>
+          <div id="searchSuggestPanel"
+               class="hidden absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50"></div>
+        </div>
+          <p class="mt-2 text-xs text-gray-500 text-center">
+            Instant search across <span class="font-semibold">title</span> + <span class="font-semibold">summary</span> + <span class="font-semibold">tags</span>; PDF text search runs automatically after a short pause.
+            <span class="block mt-1">AI Mode gives quick, high-level answers—may be slower and not available for every report.</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <p id="resultsInfo" class="text-sm text-gray-600">Loading publications…</p>
+          <div class="flex items-center gap-2">
+            <button id="loadMoreTopBtn" type="button" class="hidden md:inline-flex px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">Load more</button>
+            <label for="sortSelect" class="text-xs text-gray-500 hidden sm:block">Sort</label>
+            <select id="sortSelect" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white">
+              <option value="newest">Sort (Default - Newest)</option>
+              <option value="updated_newest">Recently Updated</option>
+              <option value="liked">Most Liked</option>
+              <option value="name_az">Sort By Name (A-Z)</option>
+              <option value="name_za">Sort By Name (Z-A)</option>
+              <option value="added_newest">Date Added (Newest-Oldest)</option>
+              <option value="added_oldest">Date Added (Oldest-Newest)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="cardsContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
+        <div id="infiniteStatus" class="hidden sticky bottom-3 z-20 text-center text-xs text-gray-600 py-2"><span class="inline-block rounded-full border border-gray-200 bg-white/95 px-3 py-1 shadow-sm">Loading more…</span></div>
+        <div id="infiniteSentinel" class="h-1"></div>
+
+        <footer class="mt-10 text-center text-xs text-gray-500">
+          © 2026 Towfiq — Platform and original content. Third-party PDFs belong to their respective owners.
+        </footer>
+      </section>
+    </div>
+  </main>
+
+  <button id="backToTop"
+          class="hidden fixed bottom-4 right-4 z-40 rounded-full bg-amber-600 text-white shadow-lg p-3 hover:bg-amber-700 transition">
+    ↑
+  </button>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm px-4 py-2 rounded shadow-lg"></div>
+
+  <!-- Sticky Search Dock (desktop): appears after scrolling past the main search -->
+  <div id="stickySearchDock" class="hidden md:hidden fixed top-20 right-4 z-[65]">
+    <div class="bg-white/95 backdrop-blur border border-gray-200 rounded-full shadow-lg px-3 py-2 flex items-center gap-2">
+      <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="M21 21l-4.3-4.3"></path>
+      </svg>
+      <input id="stickySearchInput" type="text"
+             class="w-56 lg:w-72 outline-none text-sm"
+             placeholder="Search title or summary…" />
+      <button id="stickySearchClearBtn" type="button" aria-label="Clear"
+              class="hidden shrink-0 p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18"></path>
+          <path d="M6 6l12 12"></path>
+        </svg>
+      </button>
+      <button id="stickyAiModeBtn" type="button" aria-pressed="false"
+              class="shrink-0 px-2.5 py-1.5 text-[11px] font-semibold rounded-full border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">
+        AI
+      </button>
+      <button id="stickySearchBtn" type="button"
+              class="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-full bg-amber-600 text-white hover:bg-amber-700">
+        Search
+      </button>
+    </div>
+  </div>
+
+  <!-- Sidebar show button (desktop): appears when sidebar is collapsed -->
+  <button id="sidebarShowBtn" type="button"
+          class="hidden md:hidden fixed top-28 left-3 z-[65] items-center justify-center w-10 h-10 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50"
+          aria-label="Show sidebar">
+    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M14 6H4"></path>
+      <path d="M14 12H4"></path>
+      <path d="M14 18H4"></path>
+      <path d="M18 9l3 3-3 3"></path>
+    </svg>
+  </button>
+
+
+  <!-- PDF Modal -->
+  <div id="pdfModal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/60" id="pdfModalBackdrop"></div>
+
+    <div class="relative mx-auto h-full p-0 md:p-2 flex flex-col">
+      <div class="bg-white shadow-xl overflow-hidden flex flex-col h-full rounded-none md:rounded-lg md:max-w-none md:w-[98vw] md:h-[98vh] md:mx-auto">
+        <div class="flex items-center gap-3 px-3 md:px-4 py-1.5 md:py-2 border-b border-gray-200">
+          <div class="font-semibold text-gray-900 truncate text-sm md:text-base" id="pdfModalTitle">Report</div>
+          <div class="ml-auto flex gap-2">
+            <a id="pdfModalView"
+               target="_blank" rel="noopener"
+               class="px-3 py-1.5 text-sm font-semibold bg-amber-600 text-white rounded hover:bg-amber-700">
+              View PDF (new tab)
+            </a>
+            <button id="pdfModalClose"
+                    class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
+              Close
+            </button>
+          </div>
+        </div>
+
+        <iframe id="pdfModalFrame"
+                class="w-full flex-1"
+                title="PDF viewer"
+                src=""
+                loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help / Submit Modals -->
+  <div id="helpModal" class="hidden fixed inset-0 z-[70]">
+    <div id="helpModalBackdrop" class="absolute inset-0 bg-black/60"></div>
+    <div class="relative max-w-2xl mx-auto mt-10 md:mt-14 p-3 modal-anim">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-xl overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <div id="helpModalTitle" class="font-semibold text-gray-900">Help</div>
+          <button id="helpModalClose" class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">Close</button>
+        </div>
+
+        <div id="helpModalBody" class="px-4 py-4 text-sm text-gray-700"></div>
+      </div>
+    </div>
+  </div>
+  <!-- Compare Modal (opens automatically when 2 items are selected) -->
+  <div id="compareModal" class="hidden fixed inset-0 z-[85]">
+    <div class="absolute inset-0 bg-black/50" id="compareModalBackdrop"></div>
+
+    <div class="relative h-full w-full p-0 md:p-2 flex items-center justify-center">
+      <div class="bg-white w-full h-full md:rounded-xl md:shadow-2xl overflow-hidden md:w-[99vw] md:h-[98vh] flex flex-col">
+        <div class="flex items-center gap-3 px-3 md:px-4 py-1.5 border-b border-gray-200">
+          <div class="font-semibold text-gray-900 truncate">Compare</div>
+          <div class="ml-auto flex items-center gap-2">
+            <button id="compareModalClose" type="button"
+                    class="px-3 py-1.5 text-xs md:text-sm font-semibold rounded-md border border-gray-200 hover:bg-gray-50">
+              Close
+            </button>
+          </div>
+        </div>
+
+        <iframe id="compareModalFrame" class="w-full flex-1" src="" title="Compare" loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Summary Modal (AI-generated catalog summary) -->
+  <div id="summaryModal" class="hidden fixed inset-0 z-[80]" aria-hidden="true">
+    <div id="summaryModalBackdrop" class="absolute inset-0 bg-black/60"></div>
+    <div class="relative max-w-2xl mx-auto mt-10 md:mt-14 p-3 modal-anim">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-xl overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200">
+          <div class="min-w-0">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Summary</div>
+            <div id="summaryModalTitle" class="font-semibold text-gray-900 truncate">—</div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="summaryCopyBtn" class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">Copy</button>
+            <button id="summaryModalClose" class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">Close</button>
+          </div>
+        </div>
+        <div id="summaryModalBody" class="px-4 py-4 text-sm text-gray-700 whitespace-pre-wrap max-h-[70vh] overflow-auto"></div>
+        <div id="summaryModalHint" class="px-4 pb-4 text-[11px] text-gray-500"></div>
+      </div>
+    </div>
+  </div>
+
+
+<script>
+  const DATA_URL = "https://script.google.com/macros/s/AKfycbxme0FmUWdOmNG5EVHKxkQkbm0alqCo6vWJgESo8SBzwIQunlTU0f9MdGlEqu2AqkQa/exec";
+
+  // Feature flags (safe toggles)
+  const ENABLE_DEFAULT_FILTER_EXPAND = true;   // Year expanded on load; Category expanded if enabled
+  const ENABLE_CATEGORY_FILTER = false;        // Hide Category filter section (requested)
+  const ENABLE_SEARCH_SUGGEST = true;          // Google-like suggestions dropdown
+  const ENABLE_SEARCH_RECENT = true;           // Include recent searches in suggestions
+  const ENABLE_AI_PROMPT_METADATA = true;      // Include Year/Category/Summary in AI prompt
+  const DEFAULT_TOPICS_OPEN = true;            // Topics expanded on page load
+  const ENABLE_REMOTE_LIKES = true;            // Global likes via Apps Script (action=likes_get / like_toggle)
+
+  const RECENT_SEARCH_KEY = "dotdock_recent_searches_v1";
+
+  // Browser cache for instant load
+  const CACHE_KEY = "pdf_catalog_cache_v2";
+  const CACHE_TTL_MS = 48 * 60 * 60 * 1000;   // hard cutoff: don't use very old snapshots
+  const CACHE_PREFER_MS = 15 * 60 * 1000;      // prefer cached-first render within 15m on Home
+  const LAST_SEEN_MAX_MOD_KEY = "dotdock_last_seen_max_modified_v1";
+
+  // Local-only features
+  const READING_KEY = "dotdock_reading_list_v1";
+  const WORKSPACE_KEY = "dotdock_workspace_v1";
+  const COMPARE_KEY = "dotdock_compare_v1";
+  const LIKE_KEY = "dotdock_likes_v1";
+
+  // Set these later
+  const NEWSLETTER_URL = "";
+  const SUBMIT_FORM_URL = "";  // optional: link to a Google Form / Typeform
+  const CONTACT_EMAIL = "";    // optional: submission mailto fallback if you want
+
+  const STOPWORDS = new Set([
+    "the","and","for","with","that","this","from","into","your","about","their","they","them","then","than",
+    "what","when","where","which","while","will","would","could","should","can","may","might","not","are","was","were",
+    "in","on","at","to","of","a","an","as","by","or","be","is","it","we","our","you","i"
+  ]);
+  const SEARCH_INTENT_WORDS = new Set([
+    "please","pls","show","find","search","give","get","need","want","tell","list","display","fetch",
+    "me","all","any","related","relation","relevant","about","regarding","topic","topics",
+    "pdf","pdfs","file","files","document","documents","report","reports","publication","publications"
+  ]);
+  const TREND_TOPIC_ALIASES = new Map([
+    ["gen ai", "generative ai"],
+    ["genai", "generative ai"],
+    ["generativeai", "generative ai"],
+    ["llm", "large language models"],
+    ["llms", "large language models"],
+    ["hr", "human resources"],
+    ["fintech", "financial technology"],
+    ["esg", "environment social governance"]
+  ]);
+  const TREND_MIN_FREQ = 2;
+  const TOPIC_MIN_FREQ = 2;
+  const TOPIC_MAX_COUNT = 80;
+
+  const state = {
+    tab: "home",                  // home | today
+    allItems: [],
+    filteredItems: [],
+    selectedTopics: new Set(),
+    selectedCategories: new Set(),
+    selectedYears: new Set(),
+    searchQuery: "",
+    // Progressive In-PDF enrichment (background)
+    inPdfMode: false,            // (legacy toggle; UI removed)
+    aiMode: false,
+    inPdfIds: null,              // Set<string> of IDs matched inside PDFs for current query
+    inPdfQueryKey: "",           // normalized query for inPdfIds
+    inPdfSearching: false,       // true when queued or in-flight
+    inPdfAdditionalCount: 0,
+    localResultCount: 0,
+    inPdfAbort: null,
+    overrideIds: null,          // Set<string> when showing A/B results
+    overrideOrderMap: null,     // Map<string, number> to preserve rerank order
+    overrideLabel: "",
+    page: 1,
+    pageSize: 6,                  // smaller initial paint; infinite scroll loads more
+    wsStatusFilter: "all",
+    wsTagFilter: "",
+    sortMode: "newest",
+    scoreById: new Map(),
+    topicList: [],                // [{topic,count}]
+    trendsRange: "today",         // today | 7d
+    trendsCacheKey: "",
+    trendsCacheHtml: "",
+    trendsCacheScope: "",
+    trendsCacheDonut: "",
+    trendsCacheConcentration: "—",
+    liveUpdatesTimer: null,
+    autoFillGuard: false
+  };
+
+  // --------- Utilities ----------
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  function formatTime(ts) {
+    const d = new Date(ts);
+    return d.toLocaleString();
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.remove("hidden");
+    clearTimeout(showToast._to);
+    showToast._to = setTimeout(() => t.classList.add("hidden"), 2200);
+  }
+
+  function normalizeText(s) {
+    const str = String(s ?? "");
+    // basic diacritics-safe normalization
+    return str.normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[’']/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  function tokenizeLoose(s) {
+    const t = normalizeText(s);
+    if (!t) return [];
+    return t.split(/\s+/g).filter(Boolean);
+  }
+
+  function extractAiTags(summaryText) {
+    const s = String(summaryText || "");
+    const m = s.match(/(?:^|\n)\s*tags\s*:\s*([^\n\r]+)/i);
+    if (!m) return [];
+
+    const raw = String(m[1] || "").trim();
+    if (!raw) return [];
+
+    const out = [];
+    const seen = new Set();
+    raw.split(",").forEach(part => {
+      const n = normalizeText(part);
+      if (!n) return;
+      if (seen.has(n)) return;
+      seen.add(n);
+      out.push(n);
+    });
+    return out;
+  }
+
+
+  function todayStartMs() {
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    return d.getTime();
+  }
+
+  function drivePreviewUrl(fileId) {
+    return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
+  }
+
+  function driveShareUrl(fileId) {
+    return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view?usp=sharing`;
+  }
+
+  function reportPageUrl(fileId, title) {
+    const base = `report.html?id=${encodeURIComponent(fileId)}`;
+    return title ? `${base}&t=${encodeURIComponent(title)}` : base;
+  }
+
+  function viewPageUrl(fileId, title) {
+    const base = `report.html?id=${encodeURIComponent(fileId)}&view=1`;
+    return title ? `${base}&t=${encodeURIComponent(title)}` : base;
+  }
+
+  // --------- Cache helpers ----------
+  function compactForCache_(data) {
+    // Keep cache small enough for localStorage by trimming oversized summaries.
+    return (Array.isArray(data) ? data : []).map((it) => {
+      const summary = String((it && it.summary) || "");
+      const slimSummary = summary.length > 320 ? (summary.slice(0, 320) + "…") : summary;
+      const base = (it && typeof it === "object") ? it : {};
+      return { ...base, summary: slimSummary };
+    });
+  }
+
+  function cacheSet(data) {
+    try {
+      const slim = compactForCache_(data);
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), data: slim }));
+    } catch (e) {}
+  }
+  function cacheGet() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.time || !parsed?.data) return null;
+      if (Date.now() - parsed.time > CACHE_TTL_MS) return null;
+      return parsed.data;
+    } catch { return null; }
+  }
+  // Read cache metadata (timestamp) without forcing TTL
+  function cacheGetMeta_() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.time !== "number") return null;
+      return { time: parsed.time };
+    } catch (e) { return null; }
+  }
+
+
+  // --------- Reading list ----------
+  function readingGet() {
+    try {
+      const raw = localStorage.getItem(READING_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.map(String) : [];
+    } catch { return []; }
+  }
+  function readingSet(arr) {
+    try { localStorage.setItem(READING_KEY, JSON.stringify(Array.from(new Set(arr.map(String))))); } catch {}
+  }
+  function toggleReadingItem(id) {
+    const cur = readingGet();
+    const sid = String(id);
+    const next = cur.includes(sid) ? cur.filter(x => x !== sid) : [sid, ...cur];
+    readingSet(next);
+    renderReadingList();
+    render(); // update button states
+  }
+  function isInReadingList(id) {
+    return readingGet().includes(String(id));
+  }
+
+  // --------- Workspace ----------
+  function workspaceGet() {
+    try {
+      const raw = localStorage.getItem(WORKSPACE_KEY);
+      const obj = raw ? JSON.parse(raw) : {};
+      return (obj && typeof obj === "object") ? obj : {};
+    } catch { return {}; }
+  }
+  function workspaceSet(obj) {
+    try { localStorage.setItem(WORKSPACE_KEY, JSON.stringify(obj)); } catch {}
+  }
+  function wsItem(id) {
+    const ws = workspaceGet();
+    return ws[String(id)] || {};
+  }
+  function wsSetItem(id, patch) {
+    const ws = workspaceGet();
+    const key = String(id);
+    const prev = ws[key] || {};
+    ws[key] = { ...prev, ...patch, updatedAt: Date.now() };
+    workspaceSet(ws);
+  }
+  function wsPinned(id) {
+    return !!wsItem(id).pinned;
+  }
+  function wsStatus(id) {
+    return (wsItem(id).status || "").toLowerCase();
+  }
+  function wsTags(id) {
+    const t = wsItem(id).tags;
+    return Array.isArray(t) ? t.map(x => String(x).toLowerCase()) : [];
+  }
+
+  // --------- Compare ----------
+  function compareGet() {
+    try {
+      const raw = localStorage.getItem(COMPARE_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.map(String).slice(0,2) : [];
+    } catch { return []; }
+  }
+  function compareSet(arr) {
+    try { localStorage.setItem(COMPARE_KEY, JSON.stringify(arr.slice(0,2).map(String))); } catch {}
+  }
+  function toggleCompare(id) {
+    const sid = String(id);
+    const cur = compareGet();
+    let next = cur.includes(sid) ? cur.filter(x => x !== sid) : [sid, ...cur].slice(0,2);
+    compareSet(next);
+    renderCompare();
+    render(); // update button states
+
+    // Auto-open Compare when exactly 2 items are selected.
+    if (next.length === 2) openCompareModal(next[0], next[1]);
+    else closeCompareModalUIOnly();
+  }
+  function isCompared(id) {
+    return compareGet().includes(String(id));
+  }
+
+  // --------- Likes (local fallback) ----------
+  function likesGetAll() {
+    try {
+      const raw = localStorage.getItem(LIKE_KEY);
+      const obj = raw ? JSON.parse(raw) : {};
+      const counts = (obj && typeof obj.counts === "object") ? obj.counts : {};
+      const liked  = (obj && typeof obj.liked  === "object") ? obj.liked  : {};
+      return { counts, liked };
+    } catch { return { counts:{}, liked:{} }; }
+  }
+  function likesSetAll(payload) {
+    try { localStorage.setItem(LIKE_KEY, JSON.stringify(payload || {counts:{},liked:{}})); } catch {}
+  }
+
+  // Remote likes state
+  const DEVICE_ID_KEY = "dotdock_device_id_v1";
+  let REMOTE_LIKES_READY = false;
+  let REMOTE_LIKE_COUNTS = new Map();
+  let REMOTE_COMMENT_COUNTS = new Map();
+
+
+// Comments count cache (for faster page load)
+const COMMENTS_COUNTS_CACHE_KEY = "dotdock_comments_counts_v1";
+const COMMENTS_COUNTS_TTL_MS = 60 * 1000; // 60s
+
+function commentsCountsCacheGet_() {
+  try {
+    const raw = localStorage.getItem(COMMENTS_COUNTS_CACHE_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj.ts !== "number" || !obj.counts) return null;
+    if ((Date.now() - obj.ts) > COMMENTS_COUNTS_TTL_MS) return null;
+    return obj.counts;
+  } catch { return null; }
+}
+
+function commentsCountsCacheSet_(countsObj) {
+  try {
+    localStorage.setItem(COMMENTS_COUNTS_CACHE_KEY, JSON.stringify({ ts: Date.now(), counts: countsObj || {} }));
+  } catch {}
+}
+
+ // id -> count
+  let REMOTE_LIKED = {};              // id -> true
+
+  function likeCount(id) {
+    if (ENABLE_REMOTE_LIKES && REMOTE_LIKES_READY) {
+      return Number(REMOTE_LIKE_COUNTS.get(String(id)) || 0) || 0;
+    }
+    const { counts } = likesGetAll();
+    return Number(counts[String(id)] || 0) || 0;
+  }
+  function isLiked(id) {
+    const { liked } = likesGetAll();
+    return !!liked[String(id)];
+  }
+  function toggleLike(id) {
+    const s = likesGetAll();
+    const k = String(id);
+    const currently = !!s.liked[k];
+
+    if (currently) {
+      s.liked[k] = false;
+      s.counts[k] = Math.max(0, (Number(s.counts[k] || 1) || 1) - 1);
+    } else {
+      s.liked[k] = true;
+      s.counts[k] = Math.min(1, (Number(s.counts[k] || 0) || 0) + 1);
+    }
+    likesSetAll(s);
+    return { liked: !!s.liked[k], count: Number(s.counts[k] || 0) || 0 };
+  }
+
+  // --------- Remote likes (Apps Script + Google Sheet) ----------
+  function getDeviceId_() {
+    try {
+      let v = localStorage.getItem(DEVICE_ID_KEY);
+      if (!v) {
+        v = (typeof crypto !== "undefined" && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : ("dev_" + Math.random().toString(16).slice(2) + Date.now());
+        localStorage.setItem(DEVICE_ID_KEY, v);
+      }
+      return v;
+    } catch {
+      return "dev_fallback";
+    }
+  }
+
+  async function remoteLikesPrime_() {
+    if (!ENABLE_REMOTE_LIKES) return;
+
+    const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
+    const url = base + "action=likes_get&device=" + encodeURIComponent(getDeviceId_()) + "&cb=" + Date.now();
+
+    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
+    if (!res.ok) throw new Error("likes_get failed: " + res.status);
+
+    const data = await res.json();
+    if (!data || data.ok !== true) throw new Error("likes_get returned invalid payload");
+
+    REMOTE_LIKES_READY = true;
+    REMOTE_LIKE_COUNTS = new Map(Object.entries(data.counts || {}).map(([k,v]) => [String(k), Number(v||0)||0]));
+    REMOTE_LIKED = (data.liked && typeof data.liked === "object") ? data.liked : {};
+
+    // Merge into local liked map so isLiked() remains unchanged
+    const s = likesGetAll();
+    s.liked = { ...s.liked, ...REMOTE_LIKED };
+    likesSetAll(s);
+  }
+
+  async function remoteToggleLike_(id) {
+    if (!ENABLE_REMOTE_LIKES) return null;
+
+    const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
+    const url = base +
+      "action=like_toggle&id=" + encodeURIComponent(String(id)) +
+      "&device=" + encodeURIComponent(getDeviceId_()) +
+      "&cb=" + Date.now();
+
+    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
+    if (!res.ok) throw new Error("like_toggle failed: " + res.status);
+
+    const out = await res.json();
+    if (!out || out.ok !== true) throw new Error(out?.error || "like_toggle returned invalid payload");
+
+    REMOTE_LIKES_READY = true;
+    REMOTE_LIKE_COUNTS.set(String(id), Number(out.count || 0) || 0);
+
+    // Keep local liked map consistent for UI heart
+    const s = likesGetAll();
+    s.liked[String(id)] = !!out.liked;
+    likesSetAll(s);
+
+    return { liked: !!out.liked, count: Number(out.count || 0) || 0 };
+  }
+
+
+  // --------- Remote comments (Apps Script) ----------
+  async function remoteCommentsPrime_(opts = {}) {
+  // 1) Use short-lived local cache immediately (instant UI)
+  const useCache = opts.useCache !== false;
+  if (useCache) {
+    const cached = commentsCountsCacheGet_();
+    if (cached && typeof cached === "object") {
+      REMOTE_COMMENT_COUNTS = new Map(Object.entries(cached).map(([k,v]) => [String(k), Number(v||0)||0]));
+      updateCommentCountBadges_();
+    }
+  }
+
+  // 2) Always fetch fresh counts (but only once per call)
+  const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
+  const url = base + "action=comments_counts&cb=" + Date.now();
+  const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
+  if (!res.ok) throw new Error("comments_counts failed: " + res.status);
+  const data = await res.json();
+  if (!data || data.ok !== true) throw new Error("comments_counts returned invalid payload");
+
+  const countsObj = (data.counts && typeof data.counts === "object") ? data.counts : {};
+  REMOTE_COMMENT_COUNTS = new Map(Object.entries(countsObj).map(([k,v]) => [String(k), Number(v||0)||0]));
+  commentsCountsCacheSet_(countsObj);
+  updateCommentCountBadges_();
+}
+
+  async function remoteCommentsGet_(id, limit=10, offset=0) {
+    const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
+    const url = base +
+      "action=comments_get&id=" + encodeURIComponent(String(id)) +
+      "&limit=" + encodeURIComponent(String(limit)) +
+      "&offset=" + encodeURIComponent(String(offset)) +
+      "&cb=" + Date.now();
+
+    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
+    if (!res.ok) throw new Error("comments_get failed: " + res.status);
+    const data = await res.json();
+    if (!data || data.ok !== true) throw new Error(data?.error || "comments_get returned invalid payload");
+    return data;
+  }
+
+  async function remoteCommentAdd_(id, text, name="") {
+    const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
+    const url = base +
+      "action=comment_add&id=" + encodeURIComponent(String(id)) +
+      "&device=" + encodeURIComponent(getDeviceId_()) +
+      "&name=" + encodeURIComponent(name || "Anonymous") +
+      "&text=" + encodeURIComponent(text || "") +
+      "&cb=" + Date.now();
+
+    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
+    if (!res.ok) throw new Error("comment_add failed: " + res.status);
+    const data = await res.json();
+    if (!data || data.ok !== true) throw new Error(data?.error || "comment_add returned invalid payload");
+    // update count cache
+    const c = Number(data.count || 0) || 0;
+    REMOTE_COMMENT_COUNTS.set(String(id), c);
+    return data;
+  }
+
+  // --------- In-PDF Search + AI Mode (A/B) ----------
+  async function remoteInPdfSearchIds_(q, limit = 60, signal) {
+    const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
+    const url = base +
+      "action=search_pdf&q=" + encodeURIComponent(String(q || "")) +
+      "&limit=" + encodeURIComponent(String(limit)) +
+      "&cb=" + Date.now();
+
+    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit", signal });
+    if (!res.ok) throw new Error("search_pdf failed: " + res.status);
+    const data = await res.json();
+    if (!data || data.ok !== true) throw new Error(data?.error || "search_pdf returned invalid payload");
+    return Array.isArray(data.ids) ? data.ids.map(String) : [];
+  }
+
+  function normalizeQueryKey_(q) {
+    return String(q || "").trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  function clearInPdfState_() {
+    if (state.inPdfAbort) {
+      try { state.inPdfAbort.abort(); } catch (e) {}
+    }
+    state.inPdfAbort = null;
+    state.inPdfIds = null;
+    state.inPdfQueryKey = "";
+    state.inPdfSearching = false;
+    state.inPdfAdditionalCount = 0;
+  }
+
+  async function runInPdfBackground_(q, opts = {}) {
+    const raw = String(q || "");
+    const key = normalizeQueryKey_(raw);
+
+    if (key.length < 3) {
+      clearInPdfState_();
+      return;
+    }
+
+    // Mark as searching immediately so users know something is happening.
+    state.inPdfSearching = true;
+
+    // Cancel any previous in-flight request
+    if (state.inPdfAbort) {
+      try { state.inPdfAbort.abort(); } catch (e) {}
+    }
+
+    const ac = new AbortController();
+    state.inPdfAbort = ac;
+    state.inPdfQueryKey = key;
+
+    try {
+      const ids = await remoteInPdfSearchIds_(raw, 60, ac.signal);
+      if (ac.signal.aborted) return;
+
+      // Ignore stale responses
+      if (normalizeQueryKey_(state.searchQuery) !== key) return;
+
+      state.inPdfIds = new Set((ids || []).map(String));
+    } catch (e) {
+      // Silent failure (keep local results)
+      if (ac.signal && ac.signal.aborted) return;
+      state.inPdfIds = null;
+    } finally {
+      if (state.inPdfAbort === ac) state.inPdfAbort = null;
+      if (normalizeQueryKey_(state.searchQuery) === key) {
+        state.inPdfSearching = false;
+      }
+    }
+  }
+
+  async function remoteAiSearchIds_(q, candidateIds, limit = 30) {
+    const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
+    const url = base +
+      "action=ai_search&q=" + encodeURIComponent(String(q || "")) +
+      "&limit=" + encodeURIComponent(String(limit)) +
+      "&candidates=" + encodeURIComponent((candidateIds || []).map(String).join(",")) +
+      "&cb=" + Date.now();
+
+    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
+    if (!res.ok) throw new Error("ai_search failed: " + res.status);
+    const data = await res.json();
+    if (!data) throw new Error("ai_search returned empty payload");
+    return data;
+  }
+
+  function setOverrideResults_(ids, label) {
+    const arr = Array.isArray(ids) ? ids.map(String) : [];
+    state.overrideIds = new Set(arr);
+    state.overrideOrderMap = new Map(arr.map((id, i) => [String(id), i]));
+    state.overrideLabel = label || "";
+  }
+
+  function clearOverrideResults_() {
+    state.overrideIds = null;
+    state.overrideOrderMap = null;
+    state.overrideLabel = "";
+  }
+
+
+  function commentCount(id) {
+    const k = String(id);
+    return REMOTE_COMMENT_COUNTS.has(k) ? (Number(REMOTE_COMMENT_COUNTS.get(k)) || 0) : 0;
+  }
+
+  function updateCommentCountBadges_() {
+    document.querySelectorAll("[data-comment-count]").forEach(el => {
+      const rid = el.getAttribute("data-comment-count");
+      if (!rid) return;
+      el.textContent = String(commentCount(rid));
+    });
+  }
+
+
+  async function loadCommentsPreview_(id, force=false) {
+    const statusEl = document.querySelector(`[data-comments-status="${CSS.escape(String(id))}"]`);
+    const listEl = document.querySelector(`[data-comments-list="${CSS.escape(String(id))}"]`);
+    if (!statusEl || !listEl) return;
+
+    statusEl.textContent = "Loading…";
+    listEl.innerHTML = "";
+
+    try {
+      const data = await remoteCommentsGet_(id, 5, 0);
+      // keep the per-card count accurate even if global counts haven't loaded yet
+      if (typeof data.total === "number") {
+        REMOTE_COMMENT_COUNTS.set(String(id), Number(data.total || 0) || 0);
+        updateCommentCountBadges_();
+      }
+      const items = Array.isArray(data.items) ? data.items : [];
+      if (items.length === 0) {
+        statusEl.textContent = "No comments yet.";
+        return;
+      }
+      statusEl.textContent = "";
+      const html = items.map(c => {
+        const who = escapeHtml(c.name || "Anonymous");
+        const text = escapeHtml(c.text || "");
+        const when = c.createdAt ? new Date(c.createdAt).toLocaleString() : "";
+        return `<div class="text-sm">
+          <div class="flex items-center justify-between">
+            <div class="font-semibold text-gray-800">${who}</div>
+            <div class="text-[11px] text-gray-400">${escapeHtml(when)}</div>
+          </div>
+          <div class="text-gray-700 whitespace-pre-wrap">${text}</div>
+        </div>`;
+      }).join('<div class="border-t border-gray-100 my-2"></div>');
+      listEl.innerHTML = html;
+    } catch (e) {
+      statusEl.textContent = "Comments unavailable.";
+    }
+  }
+
+
+  // --------- AI summary UX ----------
+  async function openInChatGPT(item) {
+    const link = driveShareUrl(item.id);
+    const title = item.title || "Untitled report";
+    const year = item.year ? String(item.year) : "";
+    const cats = (item.categories || []).join(", ");
+    const catalogSummary = item.summary || "";
+    const meta = ENABLE_AI_PROMPT_METADATA
+      ? `Year: ${year || "—"}
+Category: ${cats || "—"}
+Catalog summary: ${catalogSummary || "—"}
+
+`
+      : "";
+    const prompt =
+`Please summarize this PDF clearly:
+Title: ${title}
+${meta}Link: ${link}
+
+Output:
+1) 8 bullet executive summary
+2) Key concepts + definitions
+3) 5 actionable takeaways
+4) If there are frameworks/models, list them
+`;
+
+    try {
+      await navigator.clipboard.writeText(prompt);
+      window.open("https://chatgpt.com/", "_blank", "noopener");
+      showToast("AI prompt copied. Paste into ChatGPT.");
+    } catch {
+      window.open("https://chatgpt.com/", "_blank", "noopener");
+      showToast("Open ChatGPT and paste the report link.");
+    }
+  }
+
+  
+  // --------- Summary modal UX (shows catalog summary without extra clicks) ----------
+  let _currentSummaryText = "";
+
+  function openSummaryModal(item) {
+    const modal = document.getElementById("summaryModal");
+    const titleEl = document.getElementById("summaryModalTitle");
+    const bodyEl = document.getElementById("summaryModalBody");
+    const hintEl = document.getElementById("summaryModalHint");
+    const copyBtn = document.getElementById("summaryCopyBtn");
+
+    const title = String(item?.title || "Untitled report");
+    const summary = String(item?.summary || "").trim();
+
+    titleEl.textContent = title;
+
+    if (summary) {
+      _currentSummaryText = summary;
+      bodyEl.textContent = summary;
+      hintEl.textContent = "AI-generated catalog summary.";
+      copyBtn.disabled = false;
+      copyBtn.classList.remove("opacity-50");
+    } else {
+      _currentSummaryText = "";
+      bodyEl.textContent = "Summary not available yet.";
+      hintEl.textContent = "This will appear automatically once the summary worker processes this PDF.";
+      copyBtn.disabled = true;
+      copyBtn.classList.add("opacity-50");
+    }
+
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("dd-overlay-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+  }
+
+  function closeSummaryModal() {
+    const modal = document.getElementById("summaryModal");
+    modal.classList.add("hidden");
+    document.body.style.overflow = "";
+    document.body.classList.remove("dd-overlay-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+  }
+
+
+// --------- NotebookLM UX ----------
+  async function openInNotebookLM(item) {
+    const link = driveShareUrl(item.id);
+    try {
+      await navigator.clipboard.writeText(link);
+      window.open("https://notebooklm.google.com/", "_blank", "noopener");
+      showToast("Link copied. In NotebookLM: Add sources → Paste link.");
+    } catch {
+      window.open("https://notebooklm.google.com/", "_blank", "noopener");
+      showToast("Open NotebookLM and add this report link as a source.");
+    }
+  }
+
+  // --------- Data loading ----------
+  function withCb_(url) {
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}cb=${Date.now()}`;
+  }
+
+  async function loadData(forceFresh) {
+    if (!forceFresh) {
+      const cached = cacheGet();
+      if (cached) return cached;
+    }
+    const url = forceFresh ? withCb_(DATA_URL) : DATA_URL;
+    const ac = new AbortController();
+    const timeoutMs = forceFresh ? 35000 : 25000;
+    const timer = setTimeout(() => ac.abort(), timeoutMs);
+    let res;
+    try {
+      res = await fetch(url, {
+        cache: forceFresh ? "no-store" : "default",
+        mode: "cors",
+        credentials: "omit",
+        signal: ac.signal
+      });
+    } catch (e) {
+      if (ac.signal.aborted) {
+        const err = new Error("Catalog request timed out.");
+        err.code = "TIMEOUT";
+        throw err;
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res.ok) throw new Error("Failed to load catalog (" + res.status + ")");
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { throw new Error("Catalog returned non-JSON content."); }
+    if (!Array.isArray(json)) throw new Error("Catalog JSON format unexpected.");
+    return json;
+  }
+
+  // Prepare items for fast search/filter
+  function prepareItems(items) {
+    for (const it of items) {
+      const t = it.title || "";
+      const s = it.summary || "";
+      const normTitle = normalizeText(t);
+      const normSummary = normalizeText(s);
+      it._searchText = (normTitle + " " + normSummary).trim();
+      it._titleTokens = tokenizeLoose(t);
+      it._allTokens = tokenizeLoose(t + " " + s);
+      it._tokenSet = new Set(it._allTokens);
+
+      // AI tags (from summary line: "Tags:") for Topics filter
+      it._aiTags = extractAiTags(s);
+      // Include AI tags in local search
+      if (Array.isArray(it._aiTags) && it._aiTags.length) {
+        it._searchText = (it._searchText + " " + it._aiTags.join(" ")).trim();
+      }
+      it._topicSet = new Set([...(it._titleTokens || []), ...(it._aiTags || [])]);
+    }
+    return items;
+  }
+
+  // --------- Strong search ----------
+  function termVariants(term) {
+    const t = normalizeText(term);
+    if (!t) return [];
+    const out = new Set([t]);
+
+    if (t.length >= 6) {
+      out.add(t.slice(0, 5));
+      out.add(t.slice(0, 4));
+    }
+    if (t.endsWith("s") && t.length >= 4) out.add(t.slice(0, -1));
+    if (t.endsWith("ing") && t.length >= 7) out.add(t.slice(0, -3));
+    if (t.endsWith("tion") && t.length >= 7) out.add(t.slice(0, -3));
+    if (t.endsWith("ment") && t.length >= 8) out.add(t.slice(0, -4));
+
+    return Array.from(out).filter(x => x.length >= 2);
+  }
+
+  function normalizeUserQueryForSearch_(q) {
+    const raw = String(q || "").trim();
+    if (!raw) return "";
+
+    // If user asks natural-language style, keep only the semantic tail.
+    const tailMatch = raw.match(/(?:related to|about|regarding|on)\s+(.+)$/i);
+    const candidate = tailMatch ? tailMatch[1] : raw;
+
+    const toks = tokenizeLoose(candidate).filter(t => {
+      if (!t || t.length < 2) return false;
+      if (STOPWORDS.has(t)) return false;
+      if (SEARCH_INTENT_WORDS.has(t)) return false;
+      return true;
+    });
+
+    // Keep user input if cleanup becomes too aggressive.
+    if (!toks.length) return raw;
+
+    // Keep acronyms/keywords but avoid duplicate words.
+    return Array.from(new Set(toks)).join(" ");
+  }
+
+  function parseQuery(q) {
+    const raw = normalizeUserQueryForSearch_(q);
+    if (!raw) return { must: [], not: [] };
+
+    const phrases = [];
+    const withoutPhrases = raw.replace(/"([^"]+)"/g, (m, p1) => {
+      phrases.push(p1);
+      return " ";
+    });
+
+    const parts = withoutPhrases
+      .split("+")
+      .map(s => s.trim())
+      .filter(Boolean)
+      .flatMap(s => s.split(/\s+/g).map(x => x.trim()).filter(Boolean));
+
+    const must = [];
+    const not = [];
+
+    for (const p of phrases) {
+      const n = normalizeText(p);
+      if (n) must.push(n);
+    }
+
+    for (let tok of parts) {
+      if (!tok) continue;
+      let neg = false;
+      if (tok.startsWith("-") && tok.length > 1) {
+        neg = true;
+        tok = tok.slice(1);
+      }
+      const n = normalizeText(tok);
+      if (!n) continue;
+      if (STOPWORDS.has(n)) continue;
+      (neg ? not : must).push(n);
+    }
+
+    return { must, not };
+  }
+
+  function itemHasTerm(item, term) {
+    const vars = termVariants(term);
+    if (vars.length === 0) return true;
+    const txt = item._searchText || "";
+    for (const v of vars) {
+      if (txt.includes(v)) return true;
+    }
+    return false;
+  }
+
+  function matchQuery(item, parsed) {
+    for (const n of parsed.not) {
+      if (itemHasTerm(item, n)) return false;
+    }
+    for (const m of parsed.must) {
+      if (!itemHasTerm(item, m)) return false;
+    }
+    return true;
+  }
+
+  function scoreQuery(item, parsed) {
+    if (!parsed.must.length) return 0;
+    let score = 0;
+    const titleTxt = normalizeText(item.title || "");
+    const allTxt = item._searchText || "";
+
+    for (const m of parsed.must) {
+      const vars = termVariants(m);
+      let hit = false;
+
+      for (const v of vars) {
+        if (titleTxt.includes(v)) { score += 8; hit = true; break; }
+      }
+      if (!hit) {
+        for (const v of vars) {
+          if (allTxt.includes(v)) { score += 4; hit = true; break; }
+        }
+      }
+      if (!hit) score -= 5;
+    }
+
+    if (parsed.must.length >= 2) {
+      const joined = parsed.must.join(" ");
+      if (allTxt.includes(joined)) score += 6;
+    }
+
+    return score;
+  }
+
+  // --------- Facets ----------
+  function buildTopicListFromTitles() {
+    const freq = new Map();
+    const canonical = (raw) => {
+      const n = normalizeText(raw);
+      if (!n) return "";
+      return TREND_TOPIC_ALIASES.get(n) || n;
+    };
+
+    for (const item of state.allItems) {
+      const seen = new Set();
+
+      // Title-derived topics
+      for (const w of (item._titleTokens || [])) {
+        const k = canonical(w);
+        if (!k) continue;
+        if (k.length < 4) continue;
+        if (STOPWORDS.has(k)) continue;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        freq.set(k, (freq.get(k) || 0) + 1);
+      }
+
+      // AI tags extracted from summary ("Tags:") — may include multi-word phrases
+      for (const tag of (item._aiTags || [])) {
+        const k = canonical(tag);
+        if (!k) continue;
+        if (k.length < 2) continue;
+        if (STOPWORDS.has(k)) continue;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        freq.set(k, (freq.get(k) || 0) + 1);
+      }
+    }
+
+    const list = Array.from(freq.entries())
+      .filter(([,count]) => count >= TOPIC_MIN_FREQ)
+      .sort((a,b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
+      .slice(0, TOPIC_MAX_COUNT)
+      .map(([topic,count]) => ({ topic, count }));
+
+    state.topicList = list;
+  }
+
+  function buildFacetFilters() {
+    buildTopicListFromTitles();
+
+    const catCounts = new Map();
+    const yearCounts = new Map();
+
+    state.allItems.forEach(item => {
+      (item.categories || []).forEach(cat => {
+        catCounts.set(cat, (catCounts.get(cat) || 0) + 1);
+      });
+      const y = item.year;
+      if (y) yearCounts.set(y, (yearCounts.get(y) || 0) + 1);
+    });
+
+    const topicContainer = document.getElementById("topicFilters");
+    topicContainer.innerHTML = "";
+    state.topicList.forEach(({topic,count}) => {
+      const id = "topic-" + topic.replace(/\W+/g, "-").toLowerCase();
+      const row = document.createElement("div");
+      row.className = "flex items-center gap-2";
+      row.innerHTML = `
+        <input type="checkbox" id="${id}" value="${escapeHtml(topic)}"
+               class="h-3 w-3 text-amber-600 border-gray-300 rounded">
+        <label for="${id}" class="cursor-pointer text-gray-700 text-sm">
+          ${escapeHtml(topic)} <span class="text-gray-400 text-xs">(${count})</span>
+        </label>
+      `;
+      const checkbox = row.querySelector("input");
+      checkbox.checked = state.selectedTopics.has(topic);
+      checkbox.addEventListener("change", () => {
+        checkbox.checked ? state.selectedTopics.add(topic) : state.selectedTopics.delete(topic);
+        applyFilters();
+      });
+      topicContainer.appendChild(row);
+    });
+
+    const catContainer = document.getElementById("categoryFilters");
+    catContainer.innerHTML = "";
+    if (ENABLE_CATEGORY_FILTER) {
+      Array.from(catCounts.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .forEach(([cat, count]) => {
+          const id = "cat-" + cat.replace(/\W+/g, "-").toLowerCase();
+          const row = document.createElement("div");
+          row.className = "flex items-center gap-2";
+          row.innerHTML = `
+            <input type="checkbox" id="${id}" value="${escapeHtml(cat)}"
+                   class="h-3 w-3 text-amber-600 border-gray-300 rounded">
+            <label for="${id}" class="cursor-pointer text-gray-700 text-sm">
+              ${escapeHtml(cat)} <span class="text-gray-400 text-xs">(${count})</span>
+            </label>
+          `;
+          const checkbox = row.querySelector("input");
+          checkbox.checked = state.selectedCategories.has(cat);
+          checkbox.addEventListener("change", () => {
+            checkbox.checked ? state.selectedCategories.add(cat) : state.selectedCategories.delete(cat);
+            applyFilters();
+          });
+          catContainer.appendChild(row);
+        });
+    }
+
+    const yearContainer = document.getElementById("yearFilters");
+    yearContainer.innerHTML = "";
+    Array.from(yearCounts.entries())
+      .sort((a, b) => b[0] - a[0])
+      .forEach(([year, count]) => {
+        const id = "year-" + year;
+        const row = document.createElement("div");
+        row.className = "flex items-center gap-2";
+        row.innerHTML = `
+          <input type="checkbox" id="${id}" value="${year}"
+                 class="h-3 w-3 text-amber-600 border-gray-300 rounded">
+          <label for="${id}" class="cursor-pointer text-gray-700 text-sm">
+            ${year} <span class="text-gray-400 text-xs">(${count})</span>
+          </label>
+        `;
+        const checkbox = row.querySelector("input");
+        checkbox.checked = state.selectedYears.has(String(year));
+        checkbox.addEventListener("change", () => {
+          checkbox.checked ? state.selectedYears.add(String(year)) : state.selectedYears.delete(String(year));
+          applyFilters();
+        });
+        yearContainer.appendChild(row);
+      });
+  }
+
+  // --------- Filtering ----------
+  function applyFilters(keepPage = false) {
+    const q = state.searchQuery.trim();
+    const parsed = parseQuery(q);
+    state.scoreById = new Map();
+    state.inPdfAdditionalCount = 0;
+    state.localResultCount = 0;
+    const overrideOn = (state.overrideIds instanceof Set) && state.overrideIds.size > 0;
+    const oMap = state.overrideOrderMap;
+
+    const tagNeedles = state.wsTagFilter
+      .split(",")
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean);
+
+    const tStart = todayStartMs();
+
+    state.filteredItems = state.allItems.filter(item => {
+      const matchesTab = (state.tab !== "today") || (((item.addedAt || item.modified || 0)) >= tStart);
+      const matchesOverride = !overrideOn || state.overrideIds.has(String(item.id));
+
+      const idStr = String(item.id);
+      const localHit = (!q) || matchQuery(item, parsed);
+      const pdfHit = (!overrideOn && q && state.inPdfIds instanceof Set) ? state.inPdfIds.has(idStr) : false;
+      const matchesText = overrideOn ? true : (!q || localHit || pdfHit);
+const matchesTopic = state.selectedTopics.size === 0 || (() => {
+        for (const t of state.selectedTopics) {
+          if (item._topicSet && item._topicSet.has(normalizeText(t))) return true;
+        }
+        return false;
+      })();
+
+      const matchesCat = !ENABLE_CATEGORY_FILTER ||
+        state.selectedCategories.size === 0 ||
+        (item.categories || []).some(c => state.selectedCategories.has(c));
+
+      const matchesYear = state.selectedYears.size === 0 ||
+        state.selectedYears.has(String(item.year));
+
+      const stFilter = state.wsStatusFilter;
+      const matchesStatus = (stFilter === "all") || (wsStatus(item.id) === stFilter);
+
+      const tags = wsTags(item.id);
+      const matchesTags = tagNeedles.length === 0 || tagNeedles.every(t => tags.includes(t));
+
+      const passes = matchesTab && matchesOverride && matchesTopic && matchesCat && matchesYear && matchesStatus && matchesTags;
+      if (!passes) return false;
+      if (!matchesText) return false;
+
+      if (!overrideOn && q) {
+        if (localHit) {
+          state.localResultCount++;
+          state.scoreById.set(idStr, scoreQuery(item, parsed));
+        } else if (pdfHit) {
+          state.inPdfAdditionalCount++;
+          // pdf-only hits get a neutral score so they don't outrank strong local matches
+          state.scoreById.set(idStr, 0);
+        }
+      }
+
+      return true;
+    });
+
+    function titleKey(it) {
+      return String(it.title || "").toLowerCase();
+    }
+
+    function compareByMode(a, b) {
+      switch (state.sortMode) {
+        case "liked":
+          return (likeCount(b.id) - likeCount(a.id)) || ((b.modified || 0) - (a.modified || 0));
+        case "name_az":
+          return titleKey(a).localeCompare(titleKey(b));
+        case "name_za":
+          return titleKey(b).localeCompare(titleKey(a));
+        case "added_oldest":
+          return (a.addedAt || 0) - (b.addedAt || 0);
+        case "added_newest":
+        case "newest":
+          return (b.addedAt || 0) - (a.addedAt || 0) || ((b.modified || 0) - (a.modified || 0));
+        case "updated_newest":
+          return (b.modified || 0) - (a.modified || 0) || ((b.addedAt || 0) - (a.addedAt || 0));
+        default:
+          return (b.addedAt || 0) - (a.addedAt || 0) || ((b.modified || 0) - (a.modified || 0));
+      }
+    }
+
+    state.filteredItems.sort((a,b) => {
+      const ap = wsPinned(a.id) ? 1 : 0;
+      const bp = wsPinned(b.id) ? 1 : 0;
+      if (ap !== bp) return bp - ap;
+
+      if (!overrideOn && q) {
+        const as = state.scoreById.get(String(a.id)) || 0;
+        const bs = state.scoreById.get(String(b.id)) || 0;
+        if (as !== bs) return bs - as;
+      }
+
+      if (overrideOn && oMap instanceof Map) {
+        const ai = oMap.get(String(a.id));
+        const bi = oMap.get(String(b.id));
+        if (ai != null && bi != null && ai !== bi) return ai - bi;
+        if (ai != null && bi == null) return -1;
+        if (ai == null && bi != null) return 1;
+      }
+
+      return compareByMode(a, b);
+    });
+
+    if (!keepPage) state.page = 1;
+    renderLiveUpdatesPanel_();
+    renderTrendsPanel_();
+    render();
+  }
+
+  // --------- Rendering ----------
+  function renderLiveUpdatesPanel_() {
+    const listEl = document.getElementById("liveUpdatesList");
+    if (!listEl) return;
+
+    const src = (state.filteredItems && state.filteredItems.length)
+      ? state.filteredItems
+      : (state.allItems || []);
+
+    const latest = src
+      .slice()
+      .sort((a, b) => ((b.addedAt || b.modified || 0) - (a.addedAt || a.modified || 0)))
+      .slice(0, 5);
+
+    if (!latest.length) {
+      listEl.innerHTML = '<div class="text-xs text-gray-500">No recent updates yet.</div>';
+      return;
+    }
+
+    listEl.innerHTML = latest.map((item) => {
+      const ts = Number(item.addedAt || item.modified || 0) || 0;
+      const ago = formatAgoWords(ts);
+      const url = reportPageUrl(item.id, item.title || "");
+      return `
+        <a href="${url}" class="group block rounded-md px-1 py-1 hover:bg-rose-50 transition">
+          <div class="flex items-start gap-2">
+            <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full border border-rose-500 bg-white"></span>
+            <div class="min-w-0">
+              <div class="text-gray-500 text-xs" data-live-ago="${ts}">${escapeHtml(ago)}</div>
+              <div class="text-sm text-gray-800 leading-snug line-clamp-2 group-hover:text-rose-700">${escapeHtml(item.title || "Untitled")}</div>
+            </div>
+          </div>
+        </a>
+      `;
+    }).join("");
+
+    if (state.liveUpdatesTimer) clearInterval(state.liveUpdatesTimer);
+    state.liveUpdatesTimer = setInterval(() => {
+      document.querySelectorAll("[data-live-ago]").forEach((el) => {
+        const ts = Number(el.getAttribute("data-live-ago") || 0) || 0;
+        el.textContent = formatAgoWords(ts);
+      });
+    }, 30000);
+  }
+
+  function renderTrendsPanel_() {
+    const listEl = document.getElementById("trendsList");
+    const scopeEl = document.getElementById("trendsScope");
+    const donutEl = document.getElementById("trendsDonut");
+    const concentrationEl = document.getElementById("trendsConcentration");
+    const btnToday = document.getElementById("trendsRangeToday");
+    const btn7d = document.getElementById("trendsRange7d");
+    if (!listEl || !scopeEl || !donutEl || !concentrationEl) return;
+
+    if (btnToday && btn7d) {
+      const isToday = state.trendsRange !== "7d";
+      btnToday.className = "px-2 py-1 " + (isToday ? "bg-amber-50 text-amber-700 font-semibold" : "bg-white text-gray-600");
+      btn7d.className = "px-2 py-1 " + (!isToday ? "bg-amber-50 text-amber-700 font-semibold" : "bg-white text-gray-600");
+    }
+
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const todayStart = todayStartMs();
+    const sevenDaysStart = now - (7 * dayMs);
+    const source = (state.filteredItems && state.filteredItems.length)
+      ? state.filteredItems
+      : (state.allItems || []);
+
+    function inWindow_(item, fromTs, toTs) {
+      const ts = Number(item.addedAt || item.modified || 0) || 0;
+      return ts >= fromTs && ts < toTs;
+    }
+    function canonicalTopic_(raw) {
+      const k = normalizeText(raw);
+      if (!k || k.length < 3 || STOPWORDS.has(k)) return "";
+      return TREND_TOPIC_ALIASES.get(k) || k;
+    }
+    function topicFreq_(items) {
+      const freq = new Map();
+      items.forEach(item => {
+        const tags = (item && item._aiTags && item._aiTags.length)
+          ? item._aiTags
+          : (item && item._titleTokens ? item._titleTokens : []);
+        tags.forEach(t => {
+          const k = canonicalTopic_(t);
+          if (!k) return;
+          freq.set(k, (freq.get(k) || 0) + 1);
+        });
+      });
+      return freq;
+    }
+
+    const isTodayRange = state.trendsRange !== "7d";
+    const current = isTodayRange
+      ? source.filter(it => inWindow_(it, todayStart, now + dayMs))
+      : source.filter(it => inWindow_(it, sevenDaysStart, now + 1));
+    const previous = isTodayRange
+      ? source.filter(it => inWindow_(it, todayStart - dayMs, todayStart))
+      : source.filter(it => inWindow_(it, now - (14 * dayMs), sevenDaysStart));
+
+    scopeEl.textContent = isTodayRange ? "Today vs yesterday" : "Last 7 days vs previous 7 days";
+    const cacheKey = [
+      state.trendsRange,
+      source.length,
+      current.length,
+      previous.length,
+      current.slice(0, 5).map(x => String(x.id || "") + ":" + String(x.addedAt || x.modified || 0)).join("|"),
+      previous.slice(0, 5).map(x => String(x.id || "") + ":" + String(x.addedAt || x.modified || 0)).join("|")
+    ].join("::");
+    if (state.trendsCacheKey === cacheKey) {
+      listEl.innerHTML = state.trendsCacheHtml || "";
+      scopeEl.textContent = state.trendsCacheScope || scopeEl.textContent;
+      donutEl.style.background = state.trendsCacheDonut || "#f3f4f6";
+      concentrationEl.textContent = state.trendsCacheConcentration || "—";
+      return;
+    }
+    if (!source.length) {
+      listEl.innerHTML = `<div class="text-xs text-gray-500">No data yet.</div>`;
+      donutEl.style.background = "#f3f4f6";
+      concentrationEl.textContent = "—";
+      state.trendsCacheKey = cacheKey;
+      state.trendsCacheHtml = listEl.innerHTML;
+      state.trendsCacheScope = scopeEl.textContent;
+      state.trendsCacheDonut = donutEl.style.background;
+      state.trendsCacheConcentration = concentrationEl.textContent;
+      return;
+    }
+
+    const freq = topicFreq_(current);
+    const prevFreq = topicFreq_(previous);
+    const sorted = Array.from(freq.entries())
+      .sort((a,b) => (b[1] - a[1]) || a[0].localeCompare(b[0]));
+    const filtered = sorted.filter(([, count]) => count >= TREND_MIN_FREQ);
+    const top = (filtered.length ? filtered : sorted).slice(0, 8);
+    const remainderCount = (filtered.length ? filtered : sorted)
+      .slice(8)
+      .reduce((sum, [, count]) => sum + count, 0);
+    if (remainderCount > 0) top.push(["others", remainderCount]);
+
+    if (!top.length) {
+      listEl.innerHTML = `<div class="text-xs text-gray-500">No publications in this time window.</div>`;
+      donutEl.style.background = "#f3f4f6";
+      concentrationEl.textContent = "—";
+      state.trendsCacheKey = cacheKey;
+      state.trendsCacheHtml = listEl.innerHTML;
+      state.trendsCacheScope = scopeEl.textContent;
+      state.trendsCacheDonut = donutEl.style.background;
+      state.trendsCacheConcentration = concentrationEl.textContent;
+      return;
+    }
+
+    const colors = ["#f59e0b", "#3b82f6", "#10b981", "#ef4444", "#8b5cf6"];
+    const total = top.reduce((sum, [,count]) => sum + count, 0) || 1;
+    let cursor = 0;
+    const stops = top.map(([,count], i) => {
+      const start = cursor;
+      cursor += (count / total) * 100;
+      return `${colors[i % colors.length]} ${start.toFixed(2)}% ${cursor.toFixed(2)}%`;
+    }).join(", ");
+    donutEl.style.background = `conic-gradient(${stops})`;
+    concentrationEl.textContent = `Top concentration: ${Math.round((top[0][1] / total) * 100)}%`;
+
+    const max = top[0][1] || 1;
+    listEl.innerHTML = top.map(([topic, count], i) => {
+      const prev = Number(prevFreq.get(topic) || 0) || 0;
+      const delta = count - prev;
+      const arrow = delta > 0 ? "↗" : (delta < 0 ? "↘" : "→");
+      const deltaClass = delta > 0 ? "text-emerald-600" : (delta < 0 ? "text-red-500" : "text-gray-400");
+      const pct = Math.max(8, Math.round((count / max) * 100));
+      const tip = `Current: ${count}, Previous: ${prev}, Delta: ${delta > 0 ? "+" : ""}${delta}`;
+      return `
+        <button type="button" data-trend-topic="${escapeHtml(topic)}" class="w-full text-left">
+          <div class="flex items-center justify-between text-xs text-gray-700 mb-1">
+            <span class="capitalize">${escapeHtml(topic)}</span>
+            <span class="flex items-center gap-1">
+              <span class="text-gray-500">${count}</span>
+              <span class="${deltaClass}" title="${escapeHtml(tip)}">${arrow}${Math.abs(delta)}</span>
+            </span>
+          </div>
+          <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div class="h-full" style="width:${pct}%; background:${colors[i % colors.length]}"></div>
+          </div>
+        </button>
+      `;
+    }).join("");
+    state.trendsCacheKey = cacheKey;
+    state.trendsCacheHtml = listEl.innerHTML;
+    state.trendsCacheScope = scopeEl.textContent;
+    state.trendsCacheDonut = donutEl.style.background;
+    state.trendsCacheConcentration = concentrationEl.textContent;
+  }
+
+  function renderCard(item) {
+    const thumb = item.thumbUrl || "https://via.placeholder.com/260x360?text=PDF";
+    const title = escapeHtml(item.title || "Untitled");
+    const summary = escapeHtml(item.summary || "");
+    const year = item.year || "";
+    const cats = (item.categories || [])
+      .slice(0, 3)
+      .map(c => `<span class="px-2 py-0.5 border rounded-full bg-gray-50">${escapeHtml(c)}</span>`)
+      .join("");
+
+    const pinned = wsPinned(item.id);
+    const status = wsStatus(item.id);
+    const statusLabel = status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unread";
+
+    const addedTs = Number(item.addedAt || 0) || Number(item.added || 0) || 0;
+    const updatedTs = Number(item.modified || 0) || 0;
+    const addedLabel = addedTs ? ("Added " + formatAgoWords(addedTs)) : "";
+    const updatedLabel = updatedTs ? ("Updated " + formatAgoWords(updatedTs)) : "";
+
+    const addLabel = isInReadingList(item.id) ? "Remove from reading list" : "Add to reading list";
+    const compareLabel = isCompared(item.id) ? "Compared" : "Compare";
+    const pinLabel = pinned ? "Unpin" : "Pin";
+
+    const liked = isLiked(item.id);
+    const likes = likeCount(item.id);
+    const likeTitle = ENABLE_REMOTE_LIKES ? "Like" : "Like (saved in your browser)";
+    const isNew = !!(state.newIds && state.newIds.has(String(item.id)));
+
+    return `
+      <article data-card-id="${escapeHtml(item.id)}" data-new="${isNew ? "1" : "0"}" class="bg-white border ${isNew ? "border-red-200 ring-2 ring-red-100" : "border-gray-200"} rounded-lg p-4 shadow-sm hover:shadow transition">
+        <div class="grid grid-cols-1 sm:grid-cols-[160px,1fr] gap-4">
+          <div class="w-full">
+            <div class="relative border border-gray-200 bg-white rounded group">
+              <button type="button" data-action="modal" data-id="${escapeHtml(item.id)}" class="block w-full text-left">
+                <img src="${thumb}" alt="${title}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                     onerror="this.onerror=null;this.src='https://via.placeholder.com/260x360?text=PDF';"
+                     class="w-full h-auto object-cover cursor-pointer group-hover:opacity-80 transition">
+              </button>
+              
+            </div>
+          </div>
+
+          <div class="flex flex-col">
+            <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              <span>${year}</span>
+              <span class="text-gray-300">•</span>
+              <span>${escapeHtml(statusLabel)}</span>
+              ${addedTs ? `<span class="text-gray-300">•</span><span>${escapeHtml(addedLabel)}</span>` : ``}
+              ${updatedTs ? `<span class="text-gray-300">•</span><span>${escapeHtml(updatedLabel)}</span>` : ``}
+              ${isNew ? `<span class="ml-2 px-2 py-0.5 rounded-full border border-red-200 bg-red-50 text-red-700 text-[10px] font-bold tracking-wide">NEW</span>` : ``}
+              ${pinned ? `<span class="text-amber-600 flex items-center gap-1 shrink-0 ml-auto" title="Pinned">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 2l-1 1v5.2l4.6 4.6-1.4 1.4L11 9.6V3l-1-1h4zM5 14l5 5v3H8v-2.2L3.4 15.4 5 14z"/></svg>
+                <span class="text-xs font-semibold">Pinned</span></span>` : ""}
+            </div>
+
+            <a href="${reportPageUrl(item.id, item.title || "") }"
+               class="mt-1 text-base md:text-lg font-semibold text-amber-700 hover:underline">
+              ${title}
+            </a>
+
+            <div class="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">${cats}</div>
+
+            <div class="mt-4 flex flex-wrap gap-2">
+              <button data-action="reading" data-id="${escapeHtml(item.id)}"
+                 class="px-3 py-1.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">
+                ${escapeHtml(addLabel)}
+              </button>
+
+              <button data-action="compare" data-id="${escapeHtml(item.id)}"
+                 class="px-3 py-1.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">
+                ${escapeHtml(compareLabel)}
+              </button>
+
+              <button data-action="notebooklm" data-id="${escapeHtml(item.id)}"
+                 class="px-3 py-1.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">
+                NotebookLM
+              </button>
+
+              <button data-action="aisummary" data-id="${escapeHtml(item.id)}"
+                 class="px-3 py-1.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">
+                AI summary
+              </button>
+
+              <button data-action="pin" data-id="${escapeHtml(item.id)}"
+                 class="px-3 py-1.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">
+                <span class="inline-flex items-center gap-1">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 2l-1 1v5.2l4.6 4.6-1.4 1.4L11 9.6V3l-1-1h4zM5 14l5 5v3H8v-2.2L3.4 15.4 5 14z"/></svg>
+                  <span>${escapeHtml(pinLabel)}</span>
+                </span>
+              </button>
+
+              <a href="${viewPageUrl(item.id, item.title || "")}" target="_blank" rel="noopener"
+                 class="px-3 py-1.5 text-xs font-semibold bg-amber-600 text-white rounded hover:bg-amber-700">
+                View
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-gray-100">
+          <div class="flex items-center justify-between text-sm text-gray-700">
+            <button type="button" data-action="like" data-id="${escapeHtml(item.id)}"
+              class="inline-flex items-center gap-2 hover:text-gray-900" title="${escapeHtml(likeTitle)}" aria-label="Like">
+              <span class="text-base leading-none">${liked ? "♥" : "♡"}</span>
+              <span>Like</span>
+              <span class="text-xs text-gray-500">(${likes})</span>
+            </button>
+
+            <button type="button" data-action="comment_toggle" data-id="${escapeHtml(item.id)}"
+              class="inline-flex items-center gap-2 hover:text-gray-900" aria-label="Comment">
+              <span class="text-base leading-none">💬</span>
+              <span>Comment</span>
+              <span class="text-xs text-gray-500">(</span><span class="text-xs text-gray-500" data-comment-count="${escapeHtml(item.id)}">${commentCount(item.id)}</span><span class="text-xs text-gray-500">)</span>
+            </button>
+
+            <button type="button" data-action="share" data-id="${escapeHtml(item.id)}"
+              class="inline-flex items-center gap-2 hover:text-gray-900" aria-label="Share">
+              <span class="text-base leading-none">↗</span>
+              <span>Share</span>
+            </button>
+          </div>
+
+          <div class="mt-3 hidden" data-comments-panel="${escapeHtml(item.id)}">
+            <div class="bg-white border border-gray-200 rounded-lg p-3">
+              <div class="flex items-center justify-between">
+                <div class="text-sm font-semibold text-gray-800">Comments</div>
+                <a class="text-xs text-amber-700 hover:underline" href="${reportPageUrl(item.id, item.title || "")}#comments">View all</a>
+              </div>
+              <div class="mt-2 text-xs text-gray-500" data-comments-status="${escapeHtml(item.id)}">Loading…</div>
+              <div class="mt-2 space-y-2" data-comments-list="${escapeHtml(item.id)}"></div>
+
+              <div class="mt-3">
+                <label class="block text-xs text-gray-600 mb-1">Add a comment</label>
+                <textarea data-comment-input="${escapeHtml(item.id)}" rows="3"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  placeholder="Write something..."></textarea>
+                <div class="mt-2 flex items-center justify-between">
+                  <div class="text-xs text-gray-500">Be respectful — comments are public.</div>
+                  <button type="button" data-action="comment_post" data-id="${escapeHtml(item.id)}"
+                    class="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </article>
+    `;
+  }
+
+  function renderCardSkeletons(count = 6) {
+    const container = document.getElementById("cardsContainer");
+    if (!container) return;
+    const blocks = Array.from({ length: count }).map(() => `
+      <article class="border border-gray-200 rounded-xl bg-white p-4">
+        <div class="flex gap-4">
+          <div class="dd-skeleton w-[120px] h-[170px] shrink-0"></div>
+          <div class="flex-1 space-y-3">
+            <div class="dd-skeleton h-4 w-28"></div>
+            <div class="dd-skeleton h-7 w-11/12"></div>
+            <div class="dd-skeleton h-7 w-3/4"></div>
+            <div class="grid grid-cols-3 gap-2 pt-1">
+              <div class="dd-skeleton h-9"></div>
+              <div class="dd-skeleton h-9"></div>
+              <div class="dd-skeleton h-9"></div>
+            </div>
+          </div>
+        </div>
+      </article>
+    `).join("");
+    container.innerHTML = blocks;
+  }
+
+  function render() {
+    const container = document.getElementById("cardsContainer");
+    const info = document.getElementById("resultsInfo");
+
+    const total = state.filteredItems.length;
+    const maxShown = state.page * state.pageSize;
+    const itemsToShow = state.filteredItems.slice(0, maxShown);
+
+    const label = (state.tab === "today") ? "Added today" : "publications";
+    {
+      const base = `${total} ${label} found${state.overrideLabel ? " — " + state.overrideLabel : ""}`;
+
+      // Progressive in-PDF enrichment label (only for normal mode)
+      const extra = (!state.overrideLabel && state.inPdfAdditionalCount > 0)
+        ? ` — +${state.inPdfAdditionalCount} additional matches found inside PDFs`
+        : "";
+
+      const qLen = String(state.searchQuery || "").trim().length;
+      const searching = (!state.overrideLabel && state.inPdfSearching && qLen >= 3)
+        ? ` <span class="inline-flex items-center gap-1 text-amber-600 ml-1"><svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" opacity="0.25"></circle><path d="M21 12a9 9 0 0 1-9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg><span class="text-xs">searching PDFs…</span></span>`
+        : "";
+
+      info.innerHTML = base + extra + searching;
+    }
+
+    container.innerHTML = itemsToShow.map(renderCard).join("");
+    updateCommentCountBadges_();
+
+    window.dispatchEvent(new CustomEvent("dd:rendered"));
+
+    // If first batch is too short to make the page scrollable, auto-advance
+    // one page so users don't think the list is "stuck" at 6 cards.
+    if (!state.autoFillGuard && maxShown < total) {
+      const sentinel = document.getElementById("infiniteSentinel");
+      if (sentinel) {
+        const nearViewport = sentinel.getBoundingClientRect().top <= (window.innerHeight + 120);
+        if (nearViewport) {
+          state.autoFillGuard = true;
+          state.page += 1;
+          requestAnimationFrame(() => {
+            state.autoFillGuard = false;
+            render();
+          });
+        }
+      }
+    }
+}
+
+  function syncLoadMoreBtnVisibility_() {
+    const btn = document.getElementById("loadMoreBtn");
+    if (!btn) return;
+    const total = state.filteredItems.length;
+    const maxShown = state.page * state.pageSize;
+    const hasMore = maxShown < total;
+    const shouldReveal = hasMore && (state.page > 1 || window.scrollY > 220);
+    btn.classList.toggle("hidden", !shouldReveal);
+  }
+
+  // --------- Modal ----------
+  function openPdfModal(item) {
+    const modal = document.getElementById("pdfModal");
+    const frame = document.getElementById("pdfModalFrame");
+    const title = document.getElementById("pdfModalTitle");
+    const viewBtn = document.getElementById("pdfModalView");
+
+    title.textContent = item.title || "Report";
+    frame.src = drivePreviewUrl(item.id);
+    viewBtn.href = viewPageUrl(item.id, item.title || "");
+
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  document.body.classList.add("dd-overlay-open");
+    }
+
+  function closePdfModal() {
+    const modal = document.getElementById("pdfModal");
+    const frame = document.getElementById("pdfModalFrame");
+    frame.src = "";
+    modal.classList.add("hidden");
+    document.body.classList.remove("dd-overlay-open");
+    document.body.style.overflow = "";
+  }
+
+  
+  // --------- Compare Modal ----------
+  function openCompareModal(leftId, rightId) {
+    const modal = document.getElementById("compareModal");
+    const frame = document.getElementById("compareModalFrame");
+    const openPage = document.getElementById("compareModalOpenPage");
+    if (!modal || !frame) return;
+
+    const qs = new URLSearchParams();
+    qs.set("left", leftId);
+    qs.set("right", rightId);
+    qs.set("embed", "1");
+    const src = "compare.html?" + qs.toString();
+
+    frame.src = src;
+    if (openPage) openPage.href = src;
+
+    modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+    document.body.classList.add("dd-overlay-open");
+    }
+  function closeCompareModalUIOnly() {
+    const modal = document.getElementById("compareModal");
+    const frame = document.getElementById("compareModalFrame");
+    if (!modal || modal.classList.contains("hidden")) return;
+    if (frame) frame.src = "";
+    modal.classList.add("hidden");
+  document.body.style.overflow = "";
+    document.body.classList.remove("dd-overlay-open");
+    }
+
+  function closeCompareModalAndClear() {
+    // Close the modal and reset selections so users can start a fresh compare.
+    closeCompareModalUIOnly();
+    compareSet([]);
+    renderCompare();
+    render();
+  }
+
+function openPdfModalById(id) {
+    const item = state.allItems.find(x => String(x.id) === String(id));
+    if (item) openPdfModal(item);
+  }
+
+  // --------- Reading list UI ----------
+  function renderReadingList() {
+    const wrap = document.getElementById("readingListWrap");
+    const empty = document.getElementById("readingListEmpty");
+    const ids = readingGet();
+
+    if (ids.length === 0) {
+      empty.classList.remove("hidden");
+      wrap.classList.add("hidden");
+      wrap.innerHTML = "";
+      return;
+    }
+
+    empty.classList.add("hidden");
+    wrap.classList.remove("hidden");
+
+    const itemsById = new Map(state.allItems.map(it => [String(it.id), it]));
+    wrap.innerHTML = ids.map(id => {
+      const it = itemsById.get(String(id));
+      if (!it) return "";
+      return `
+        <div class="border border-gray-200 rounded p-2 bg-gray-50">
+          <div class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(it.title || "Untitled")}</div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <a href="${reportPageUrl(it.id, it.title || "")}" class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50">Open</a>
+            <button data-action="modal" data-id="${escapeHtml(it.id)}" class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50">Preview</button>
+            <button data-action="reading" data-id="${escapeHtml(it.id)}" class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50">Remove</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // --------- Compare UI ----------
+  function renderCompare() {
+    const wrap = document.getElementById("compareWrap");
+    const openBtn = document.getElementById("openCompareBtn");
+    const leftInput = document.getElementById("compareSearchLeft");
+    const rightInput = document.getElementById("compareSearchRight");
+
+    const ids = compareGet();
+    const itemsById = new Map(state.allItems.map(it => [String(it.id), it]));
+
+    function titleFor(id) {
+      const it = itemsById.get(String(id));
+      return it ? (it.title || "Untitled") : String(id || "");
+    }
+
+    if (wrap) {
+      wrap.innerHTML = ids.map((id, i) => {
+        const title = titleFor(id);
+        const side = (i === 0) ? "Left" : "Right";
+        return `
+          <div class="border border-gray-200 rounded p-2 bg-gray-50 flex items-start gap-2">
+            <div class="text-xs text-gray-500 mt-0.5">${side}</div>
+            <div class="text-sm font-semibold text-gray-800 truncate flex-1">${escapeHtml(title)}</div>
+            <button class="text-xs font-semibold text-amber-700 hover:underline" data-action="compare" data-id="${escapeHtml(id)}">Remove</button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Keep picker inputs in sync with current selection
+    if (leftInput) {
+      const selId = ids[0] ? String(ids[0]) : "";
+      leftInput.setAttribute("data-selected-id", selId);
+      if (!selId) {
+        leftInput.value = "";
+      } else if (document.activeElement !== leftInput) {
+        leftInput.value = titleFor(selId);
+      }
+    }
+    if (rightInput) {
+      const selId = ids[1] ? String(ids[1]) : "";
+      rightInput.setAttribute("data-selected-id", selId);
+      if (!selId) {
+        rightInput.value = "";
+      } else if (document.activeElement !== rightInput) {
+        rightInput.value = titleFor(selId);
+      }
+    }
+
+    if (openBtn) {
+      if (ids.length === 2) {
+        openBtn.classList.remove("hidden");
+        openBtn.href = `compare.html?left=${encodeURIComponent(ids[0])}&right=${encodeURIComponent(ids[1])}`;
+      } else {
+        openBtn.classList.add("hidden");
+        openBtn.href = "#";
+      }
+    }
+  }
+
+  // --------- Workspace export ----------
+  function exportWorkspace() {
+    const ws = workspaceGet();
+    const data = JSON.stringify(ws, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "dotdock-workspace.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  // --------- Infinite scroll ----------
+  function setupInfiniteScroll() {
+    const statusEl = document.getElementById("infiniteStatus");
+    let statusTimer = null;
+    let statusShownAt = 0;
+
+    function setLoadingMore_(on) {
+      if (!statusEl) return;
+      if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
+      if (on) {
+        statusEl.classList.remove("hidden");
+        statusShownAt = Date.now();
+      } else {
+        const elapsed = Date.now() - statusShownAt;
+        const wait = Math.max(0, 900 - elapsed); // visible long enough for humans to notice
+        statusTimer = setTimeout(() => statusEl.classList.add("hidden"), wait);
+      }
+    }
+
+    function loadNextPage_() {
+      const total = state.filteredItems.length;
+      const maxShown = state.page * state.pageSize;
+      if (maxShown >= total) return false;
+      state.page += 1;
+      render();
+      return true;
+    }
+
+    let scheduled = false;
+    function scheduleCheck_() {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+
+        const sentinel = document.getElementById("infiniteSentinel");
+        const preloadPx = 1200;
+        let nearBottom = false;
+
+        if (sentinel) {
+          const rect = sentinel.getBoundingClientRect();
+          nearBottom = rect.top <= (window.innerHeight + preloadPx);
+        } else {
+          nearBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - preloadPx);
+        }
+
+        if (!nearBottom) {
+          setLoadingMore_(false);
+          return;
+        }
+
+        // Load up to 3 pages per frame so short-page/tab-switch cases don't stall.
+        let loops = 0;
+        while (loops < 3 && loadNextPage_()) {
+          loops += 1;
+        }
+        setLoadingMore_(loops > 0);
+      });
+    }
+
+    window.addEventListener("scroll", scheduleCheck_, { passive: true });
+    window.addEventListener("resize", scheduleCheck_, { passive: true });
+    window.addEventListener("dd:rendered", scheduleCheck_);
+
+    // Initial check in case the first batch doesn't fill the viewport.
+    scheduleCheck_();
+  }
+
+
+  // --------- Help/Submit modal ----------
+  function openHelpModal(kind) {
+    const modal = document.getElementById("helpModal");
+    const title = document.getElementById("helpModalTitle");
+    const body = document.getElementById("helpModalBody");
+
+    let html = "";
+    if (kind === "glossary") {
+      title.textContent = "Glossary";
+      html = `
+        <div class="space-y-3">
+          <p class="text-gray-600">Add your glossary terms here (later we can make it its own page).</p>
+          <ul class="list-disc ml-5 text-gray-700">
+            <li><span class="font-semibold">Pinned</span>: Shows at the top of the catalog (local).</li>
+            <li><span class="font-semibold">Reading list</span>: Save items locally to revisit.</li>
+            <li><span class="font-semibold">Topics</span>: Auto keywords extracted from titles.</li>
+          </ul>
+        </div>
+      `;
+    } else if (kind === "faq") {
+      title.textContent = "FAQ";
+      html = `
+        <div class="space-y-3 text-gray-700">
+          <p><span class="font-semibold">Does search look inside PDFs?</span><br>
+          Not yet. This search uses title + summary. Inside-PDF search needs text extraction into the JSON index (Apps Script) or a separate search service.</p>
+
+          <p><span class="font-semibold">Are likes global?</span><br>
+          ${ENABLE_REMOTE_LIKES ? "Yes — likes are shared across users (stored in a Google Sheet via Apps Script)." : "Currently likes are saved in your browser only. Global likes requires a backend/database."}</p>
+        </div>
+      `;
+    } else if (kind === "submit") {
+      title.textContent = "Submit a PDF";
+      html = `
+        <div class="space-y-3">
+          <p class="text-gray-600">No backend yet — this form helps people send you info cleanly.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-600">Name</label>
+              <input id="subName" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="Your name">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600">Email</label>
+              <input id="subEmail" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="you@example.com">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-600">PDF title</label>
+            <input id="subTitle" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="Title of the PDF">
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-600">Google Drive link</label>
+            <input id="subLink" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="Paste share link">
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-600">Year</label>
+              <input id="subYear" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="2026">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600">Suggested category</label>
+              <input id="subCat" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="e.g., AI Governance">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-600">Notes</label>
+            <textarea id="subNotes" rows="4" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="Why should dotdock include it?"></textarea>
+          </div>
+
+          <div class="flex flex-wrap gap-2 pt-2">
+            <button id="subCopy" class="px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">Copy submission</button>
+            <button id="subSend" class="px-3 py-2 text-sm font-semibold bg-amber-600 text-white rounded hover:bg-amber-700">Send</button>
+          </div>
+
+          <div class="text-[11px] text-gray-500">
+            If you later set <code>SUBMIT_FORM_URL</code>, “Send” will open that form instead.
+          </div>
+        </div>
+      `;
+    }
+
+    body.innerHTML = html;
+
+    modal.classList.remove("hidden");
+    document.body.classList.add("modal-open");
+
+    if (kind === "submit") {
+      const getPayload = () => {
+        const name = (document.getElementById("subName")?.value || "").trim();
+        const email = (document.getElementById("subEmail")?.value || "").trim();
+        const t = (document.getElementById("subTitle")?.value || "").trim();
+        const link = (document.getElementById("subLink")?.value || "").trim();
+        const year = (document.getElementById("subYear")?.value || "").trim();
+        const cat = (document.getElementById("subCat")?.value || "").trim();
+        const notes = (document.getElementById("subNotes")?.value || "").trim();
+        return { name, email, t, link, year, cat, notes };
+      };
+
+      const buildText = (p) =>
+`dotdock submission
+Name: ${p.name}
+Email: ${p.email}
+Title: ${p.t}
+Link: ${p.link}
+Year: ${p.year}
+Category: ${p.cat}
+Notes: ${p.notes}
+`;
+
+      document.getElementById("subCopy").addEventListener("click", async () => {
+        const p = getPayload();
+        const text = buildText(p);
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast("Submission copied.");
+        } catch {
+          showToast("Copy failed — select and copy manually.");
+        }
+      });
+
+      document.getElementById("subSend").addEventListener("click", () => {
+        const p = getPayload();
+        const text = buildText(p);
+
+        if (SUBMIT_FORM_URL) {
+          window.open(SUBMIT_FORM_URL, "_blank", "noopener");
+          showToast("Opened submission form.");
+          return;
+        }
+
+        if (CONTACT_EMAIL) {
+          const subject = encodeURIComponent("dotdock submission");
+          const body = encodeURIComponent(text);
+          window.location.href = `mailto:${encodeURIComponent(CONTACT_EMAIL)}?subject=${subject}&body=${body}`;
+          return;
+        }
+
+        navigator.clipboard?.writeText(text).then(() => {
+          showToast("Copied. Now paste it to send.");
+        }).catch(() => showToast("Set SUBMIT_FORM_URL or CONTACT_EMAIL later."));
+      });
+    }
+  }
+
+  function closeHelpModal() {
+    const modal = document.getElementById("helpModal");
+    modal.classList.add("hidden");
+    document.body.classList.remove("modal-open");
+  }
+
+  // --------- Tabs ----------
+  function setTabFromUrl() {
+    const tab = new URLSearchParams(location.search).get("tab");
+    state.tab = (tab === "today") ? "today" : "home";
+
+    const home = document.getElementById("navHome");
+    const today = document.getElementById("navToday");
+    if (home) home.classList.toggle("text-amber-700", state.tab === "home");
+    if (today) today.classList.toggle("text-amber-700", state.tab === "today");
+  }
+function formatAgoWords(ts) {
+  if (!ts) return "—";
+  const diff = Date.now() - ts;
+
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return `${sec} second${sec === 1 ? "" : "s"} ago`;
+
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} minute${min === 1 ? "" : "s"} ago`;
+
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
+
+  const day = Math.floor(hr / 24);
+  return `${day} day${day === 1 ? "" : "s"} ago`;
+}
+
+function formatAgo(ts) {
+  if (!ts) return "—";
+  const diff = Date.now() - ts;
+
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return `${sec}s ago`;
+
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
+}
+
+function catalogMaxTimestamp_(items) {
+  let newest = 0;
+  for (const it of (items || [])) {
+    const a = Number((it && it.addedAt) || 0) || 0;
+    const m = Number((it && it.modified) || 0) || 0;
+    const v = Math.max(a, m);
+    if (v > newest) newest = v;
+  }
+  return newest;
+}
+
+function setLiveHeaderStatus({ updatedAt, newCount }) {
+  const wrap = document.getElementById("liveStatus");
+  const updatedEl = document.getElementById("liveUpdatedText");
+  const newEl = document.getElementById("liveNewText");
+  if (!wrap || !updatedEl || !newEl) return;
+
+  const ts = Number(updatedAt || 0) || 0;
+  const nc = Number(newCount || 0) || 0;
+
+  wrap.classList.remove("hidden");
+  wrap.setAttribute("data-updated-at", String(ts));
+  wrap.setAttribute("data-new-count", String(nc));
+
+  updatedEl.textContent = `Catalog updated ${formatAgo(ts)}`;
+
+  if (nc > 0) {
+    newEl.textContent = `New: ${nc}`;
+    newEl.classList.remove("hidden");
+  } else {
+    newEl.classList.add("hidden");
+  }
+}
+
+function computeNewCountSinceLastVisit(items, commit = true) {
+  // Uses max "addedAt" timestamp from last visit as baseline (stable).
+  let lastSeenMax = 0;
+  try {
+    lastSeenMax = Number(localStorage.getItem(LAST_SEEN_MAX_MOD_KEY) || 0) || 0;
+  } catch {}
+
+  let newest = 0;
+  let newCount = 0;
+
+  for (const it of (items || [])) {
+    const m = Number(it.addedAt || it.modified || 0) || 0;
+    if (m > newest) newest = m;
+    if (lastSeenMax && m > lastSeenMax) newCount += 1;
+  }
+
+  // Save newest as "seen" for next visit (after we compute)
+  if (commit && newest) {
+    try { localStorage.setItem(LAST_SEEN_MAX_MOD_KEY, String(newest)); } catch {}
+  }
+
+  // On first-ever visit, lastSeenMax = 0, we show no "new items" badge (avoids confusion)
+  return lastSeenMax ? newCount : 0;
+}
+
+// Compute "new since last visit" markers based on a baseline read once per session.
+// This avoids the badge disappearing immediately after we store the newest timestamp.
+function ensureNewBaseline_() {
+  if (typeof state.lastSeenBaseline === "number") return state.lastSeenBaseline;
+  let v = 0;
+  try { v = Number(localStorage.getItem(LAST_SEEN_MAX_MOD_KEY) || 0) || 0; } catch {}
+  state.lastSeenBaseline = v;
+  return v;
+}
+
+function computeNewMarkers_(items) {
+  const baseline = ensureNewBaseline_();
+  const set = new Set();
+  let newest = 0;
+  for (const it of (items || [])) {
+    const m = Number(it.addedAt || it.modified || 0) || 0;
+    if (m > newest) newest = m;
+    if (baseline && m > baseline) set.add(String(it.id));
+  }
+  state.newIds = set;
+  return { newCount: baseline ? set.size : 0, newest };
+}
+
+function commitSeenMaxOnce_(items) {
+  if (state._seenCommitted) return;
+  const { newest } = computeNewMarkers_(items);
+  if (newest) {
+    try { localStorage.setItem(LAST_SEEN_MAX_MOD_KEY, String(newest)); } catch {}
+  }
+  state._seenCommitted = true;
+}
+
+function setupNewPostsBtn_() {
+  const btn = document.getElementById("newPostsBtn");
+  const livePill = document.getElementById("liveNewText");
+  if (!btn) return;
+
+  function updateBtn() {
+    const n = Number(document.getElementById("liveStatus")?.getAttribute("data-new-count") || 0) || 0;
+    if (n <= 0) { btn.classList.add("hidden"); return; }
+
+    // Only show after user scrolls a bit (LinkedIn-style)
+    if (window.scrollY < 220) { btn.classList.add("hidden"); return; }
+
+    btn.textContent = `↑ New reports (${n})`;
+    btn.classList.remove("hidden");
+  }
+
+  window.addEventListener("scroll", updateBtn, { passive: true });
+
+  btn.addEventListener("click", () => {
+    // Scroll to the first NEW card
+    const first = document.querySelector('article[data-new="1"]');
+    if (first) {
+      first.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  });
+
+  if (livePill) {
+    livePill.addEventListener("click", () => {
+      const u = new URL(location.href);
+      u.searchParams.set("tab", "today");
+      location.href = u.toString();
+    });
+  }
+
+  updateBtn();
+}
+
+
+  
+  // --------- DOM events ----------
+  document.addEventListener("DOMContentLoaded", async () => {
+    const searchInput = document.getElementById("searchInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const searchClearBtn = document.getElementById("searchClearBtn");
+    const searchSuggestPanel = document.getElementById("searchSuggestPanel");
+    const searchWrap = document.getElementById("searchWrap");
+
+    // Sticky search dock (desktop)
+    const searchSection = document.getElementById("searchSection");
+    const stickyDock = document.getElementById("stickySearchDock");
+    const stickyInput = document.getElementById("stickySearchInput");
+    const stickyBtn = document.getElementById("stickySearchBtn");
+    const stickyClearBtn = document.getElementById("stickySearchClearBtn");
+
+    // Sidebar toggle (desktop)
+    const sidebar = document.getElementById("sidebar");
+    const catalogue = document.getElementById("catalogue");
+    const sidebarHideBtn = document.getElementById("sidebarHideBtn");
+    const sidebarShowBtn = document.getElementById("sidebarShowBtn");
+
+    function showOnDesktop_(el, displayClass) {
+      if (!el) return;
+      el.classList.remove("md:hidden");
+      if (displayClass) el.classList.add(displayClass);
+    }
+    function hideOnDesktop_(el, displayClass) {
+      if (!el) return;
+      if (displayClass) el.classList.remove(displayClass);
+      el.classList.add("md:hidden");
+    }
+
+    function setSidebarCollapsed(collapsed) {
+      if (!sidebar || !catalogue) return;
+      sidebar.classList.toggle("md:hidden", !!collapsed);
+
+      // Expand catalogue when sidebar is hidden (desktop)
+      if (collapsed) {
+        catalogue.classList.remove("md:col-span-9");
+        catalogue.classList.add("md:col-span-12");
+        showOnDesktop_(sidebarShowBtn, "md:flex");
+      } else {
+        catalogue.classList.remove("md:col-span-12");
+        catalogue.classList.add("md:col-span-9");
+        hideOnDesktop_(sidebarShowBtn, "md:flex");
+      }
+      try { localStorage.setItem("dotdock_sidebar_collapsed_v1", collapsed ? "1" : "0"); } catch(e) {}
+    }
+
+    // Restore previous sidebar state (desktop)
+    try {
+      const prev = localStorage.getItem("dotdock_sidebar_collapsed_v1");
+      if (prev === "1") setSidebarCollapsed(true);
+      else hideOnDesktop_(sidebarShowBtn, "md:flex");
+    } catch(e) {}
+
+    if (sidebarHideBtn) sidebarHideBtn.addEventListener("click", () => setSidebarCollapsed(true));
+    if (sidebarShowBtn) sidebarShowBtn.addEventListener("click", () => setSidebarCollapsed(false));
+    // Align floating UI (sticky search + sidebar show button) to the main content column
+    const mainContainer = document.querySelector("main#top") || document.querySelector("main");
+    function updateDockPositions_() {
+      if (!mainContainer) return;
+      const rect = mainContainer.getBoundingClientRect();
+      const left = Math.max(8, Math.round(rect.left) + 8);
+      const right = Math.max(8, Math.round(window.innerWidth - rect.right) + 8);
+      if (sidebarShowBtn) sidebarShowBtn.style.left = left + "px";
+      if (stickyDock) stickyDock.style.right = right + "px";
+    }
+    window.addEventListener("resize", updateDockPositions_, { passive: true });
+    setTimeout(updateDockPositions_, 0);
+
+
+    // Compare modal controls
+    const compareBackdrop = document.getElementById("compareModalBackdrop");
+    const compareCloseBtn = document.getElementById("compareModalClose");
+    if (compareBackdrop) compareBackdrop.addEventListener("click", closeCompareModalAndClear);
+    if (compareCloseBtn) compareCloseBtn.addEventListener("click", closeCompareModalAndClear);
+
+    // Keep sticky dock in sync with main search
+    function syncStickyFromMain_() {
+      if (!stickyInput) return;
+      stickyInput.value = searchInput.value;
+      if (stickyClearBtn) stickyClearBtn.classList.toggle("hidden", stickyInput.value.length === 0);
+    }
+    function syncMainFromSticky_(doRunSearch) {
+      if (!stickyInput) return;
+      searchInput.value = stickyInput.value;
+      searchClearBtn.classList.toggle("hidden", searchInput.value.length === 0);
+      if (doRunSearch) doSearch({ remember: true, closeSuggest: true });
+    }
+
+    if (stickyInput) {
+      stickyInput.addEventListener("input", () => {
+        if (stickyClearBtn) stickyClearBtn.classList.toggle("hidden", stickyInput.value.length === 0);
+        syncMainFromSticky_(false);
+      });
+      stickyInput.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); syncMainFromSticky_(true); }
+      });
+    }
+    if (stickyBtn) stickyBtn.addEventListener("click", () => syncMainFromSticky_(true));
+    if (stickyClearBtn) stickyClearBtn.addEventListener("click", () => {
+      if (stickyInput) stickyInput.value = "";
+      syncMainFromSticky_(true);
+      stickyClearBtn.classList.add("hidden");
+      if (stickyInput) stickyInput.focus();
+    });
+
+    // Show sticky search after scrolling past the main search section (desktop)
+    function updateStickySearchDock_() {
+      if (!stickyDock || !searchSection) return;
+      const y = window.scrollY || 0;
+      const threshold = searchSection.offsetTop + searchSection.offsetHeight + 20;
+      const on = y > threshold;
+
+      if (on) {
+        showOnDesktop_(stickyDock, "md:block");
+        stickyDock.classList.add("is-on");
+        syncStickyFromMain_();
+      } else {
+        hideOnDesktop_(stickyDock, "md:block");
+        stickyDock.classList.remove("is-on");
+      }
+      updateDockPositions_();
+    }
+
+    const clearBtn = document.getElementById("clearFilters");
+    const refreshBtn = document.getElementById("userRefreshBtn");
+    const refreshStatus = document.getElementById("userRefreshStatus");
+    const backToTopBtn = document.getElementById("backToTop");
+    const toggleReading = document.getElementById("toggleReadingList");
+    const clearReading = document.getElementById("clearReadingListBtn");
+    const toggleTopics = document.getElementById("toggleTopics");
+
+    const topicEl = document.getElementById("topicFilters");
+    if (topicEl) topicEl.classList.remove("hidden");
+    if (toggleTopics) toggleTopics.textContent = "Hide";
+
+    const toggleCats = document.getElementById("toggleCats");
+    const toggleYears = document.getElementById("toggleYears");
+    const wsStatusFilter = document.getElementById("wsStatusFilter");
+    const wsTagFilter = document.getElementById("wsTagFilter");
+    const exportWsBtn = document.getElementById("exportWorkspaceBtn");
+    const clearCompareBtn = document.getElementById("clearCompareBtn");
+    const sortSelect = document.getElementById("sortSelect");
+    const newsletterBtn = document.getElementById("newsletterBtn");
+    const trendsList = document.getElementById("trendsList");
+    const trendsRangeToday = document.getElementById("trendsRangeToday");
+    const trendsRange7d = document.getElementById("trendsRange7d");
+    const navHome = document.getElementById("navHome");
+    const navToday = document.getElementById("navToday");
+
+    setTabFromUrl();
+
+    function switchTab_(tab) {
+      state.tab = (tab === "today") ? "today" : "home";
+      const u = new URL(location.href);
+      if (state.tab === "today") u.searchParams.set("tab", "today");
+      else u.searchParams.delete("tab");
+      history.replaceState({}, "", u.toString());
+      setTabFromUrl();
+      applyFilters(true);
+      // Ensure fresh data check after tab switches without full page reload.
+      refreshCatalogInBackground_(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    if (navHome) navHome.addEventListener("click", (e) => { e.preventDefault(); switchTab_("home"); });
+    if (navToday) navToday.addEventListener("click", (e) => { e.preventDefault(); switchTab_("today"); });
+
+    if (trendsList) {
+      trendsList.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-trend-topic]");
+        if (!btn) return;
+        const topic = String(btn.getAttribute("data-trend-topic") || "").trim();
+        if (!topic || topic === "others") return;
+        state.searchQuery = topic;
+        searchInput.value = topic;
+        doSearch({ remember: true, closeSuggest: true });
+      });
+    }
+    if (trendsRangeToday) trendsRangeToday.addEventListener("click", () => {
+      state.trendsRange = "today";
+      renderTrendsPanel_();
+    });
+    if (trendsRange7d) trendsRange7d.addEventListener("click", () => {
+      state.trendsRange = "7d";
+      renderTrendsPanel_();
+    });
+
+    document.getElementById("pdfModalClose").addEventListener("click", closePdfModal);
+    document.getElementById("pdfModalBackdrop").addEventListener("click", closePdfModal);
+
+    const helpBtn = document.getElementById("helpBtn");
+    const helpDd = document.getElementById("helpDropdown");
+    helpBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      helpDd.classList.toggle("hidden");
+    });
+    document.addEventListener("click", (e) => {
+      if (!helpDd.contains(e.target) && e.target !== helpBtn) helpDd.classList.add("hidden");
+    });
+
+    document.querySelectorAll("[data-openmodal]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        helpDd.classList.add("hidden");
+        openHelpModal(btn.getAttribute("data-openmodal"));
+      });
+    });
+    document.getElementById("helpModalBackdrop").addEventListener("click", closeHelpModal);
+    document.getElementById("helpModalClose").addEventListener("click", closeHelpModal);
+    // Summary modal handlers
+    const summaryBackdrop = document.getElementById("summaryModalBackdrop");
+    const summaryCloseBtn = document.getElementById("summaryModalClose");
+    const summaryCopyBtn = document.getElementById("summaryCopyBtn");
+
+    if (summaryBackdrop) summaryBackdrop.addEventListener("click", closeSummaryModal);
+    if (summaryCloseBtn) summaryCloseBtn.addEventListener("click", closeSummaryModal);
+    if (summaryCopyBtn) summaryCopyBtn.addEventListener("click", async () => {
+      if (!_currentSummaryText) return;
+      try {
+        await navigator.clipboard.writeText(_currentSummaryText);
+        showToast("Summary copied.");
+      } catch (e) {
+        showToast("Copy failed.");
+      }
+    });
+
+
+    function setToggleState(btn, panel, open) {
+      if (!btn || !panel) return;
+      panel.classList.toggle("hidden", !open);
+      btn.textContent = open ? "Hide" : "Show";
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
+    if (toggleTopics) {
+      toggleTopics.addEventListener("click", () => {
+        const el = document.getElementById("topicFilters");
+        const open = el.classList.toggle("hidden") === false;
+        toggleTopics.textContent = open ? "Hide" : "Show";
+        toggleTopics.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    }
+    if (toggleCats) {
+      toggleCats.addEventListener("click", () => {
+        const el = document.getElementById("categoryFilters");
+        const open = el.classList.toggle("hidden") === false;
+        toggleCats.textContent = open ? "Hide" : "Show";
+        toggleCats.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    }
+    if (toggleYears) {
+      toggleYears.addEventListener("click", () => {
+        const el = document.getElementById("yearFilters");
+        const open = el.classList.toggle("hidden") === false;
+        toggleYears.textContent = open ? "Hide" : "Show";
+        toggleYears.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    }
+
+let _lastHeaderUpdateAt = Date.now();
+setInterval(() => {
+  // If we've ever shown it once, keep updating the "ago" label
+  const updatedEl = document.getElementById("liveUpdatedText");
+  const wrap = document.getElementById("liveStatus");
+  if (!wrap || wrap.classList.contains("hidden")) return;
+
+  // We store the last update time in a data attribute
+  const ts = Number(wrap.getAttribute("data-updated-at") || 0) || 0;
+  const nc = Number(wrap.getAttribute("data-new-count") || 0) || 0;
+  if (ts) setLiveHeaderStatus({ updatedAt: ts, newCount: nc }); // preserve "ago" + "new"
+}, 30000);
+    
+const AUTO_REFRESH_MS = 60 * 1000;
+let _refreshInFlight = false;
+async function refreshCatalogInBackground_(notify = true) {
+  if (_refreshInFlight) return;
+  _refreshInFlight = true;
+  try {
+    const data = prepareItems(await loadData(true));
+    // quick change detection: length + newest modified
+    const sig = (arr) => `${arr.length}|${Math.max(...arr.map(x => x.modified || 0))}`;
+
+    if (sig(data) !== sig(state.allItems || [])) {
+      state.allItems = data;
+      cacheSet(data);
+      const { newCount } = computeNewMarkers_(data);
+      setLiveHeaderStatus({ updatedAt: catalogMaxTimestamp_(data), newCount });
+      commitSeenMaxOnce_(data);
+      buildFacetFilters();
+      refreshSearchSuggestData();
+      applyFilters(true); // keep page/scroll logic steadier
+      renderReadingList();
+      renderCompare();
+      if (notify) showToast("New reports loaded.");
+    }
+  } catch (e) {
+    // ignore refresh errors silently
+  } finally {
+    _refreshInFlight = false;
+  }
+}
+setInterval(() => { refreshCatalogInBackground_(true); }, AUTO_REFRESH_MS);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") refreshCatalogInBackground_(false);
+});
+
+    const catSection = document.getElementById("categoryFilterSection");
+    if (!ENABLE_CATEGORY_FILTER && catSection) {
+      catSection.classList.add("hidden");
+      state.selectedCategories.clear();
+    }
+
+    if (ENABLE_DEFAULT_FILTER_EXPAND) {
+      setToggleState(toggleTopics, document.getElementById("topicFilters"), !!DEFAULT_TOPICS_OPEN);
+      setToggleState(toggleCats, document.getElementById("categoryFilters"), !!ENABLE_CATEGORY_FILTER);
+      setToggleState(toggleYears, document.getElementById("yearFilters"), true);
+    }
+
+    sortSelect.addEventListener("change", () => {
+      state.sortMode = sortSelect.value || "newest";
+      applyFilters(true);
+    });
+
+    newsletterBtn.addEventListener("click", () => {
+      if (!NEWSLETTER_URL) {
+        showToast("Newsletter link not set yet.");
+        return;
+      }
+      window.open(NEWSLETTER_URL, "_blank", "noopener");
+    });
+
+    const _recentMax = 12;
+
+    function loadRecentSearches() {
+      try {
+        const raw = localStorage.getItem(RECENT_SEARCH_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr.map(String) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveRecentSearches(arr) {
+      try { localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(arr)); } catch {}
+    }
+
+    function rememberRecentSearch(q) {
+      if (!ENABLE_SEARCH_RECENT) return;
+      const s = String(q || "").trim();
+      if (!s) return;
+      const norm = normalizeText(s);
+      let arr = loadRecentSearches();
+      arr = arr.filter(x => normalizeText(x) !== norm);
+      arr.unshift(s);
+      if (arr.length > _recentMax) arr = arr.slice(0, _recentMax);
+      saveRecentSearches(arr);
+    }
+
+    let _suggestTitles = [];
+    let _suggestTopics = [];
+    let _suggestKeywords = [];
+
+    function refreshSearchSuggestData() {
+      if (!ENABLE_SEARCH_SUGGEST) return;
+      _suggestTitles = (state.allItems || []).map(it => it && it.title).filter(Boolean);
+      _suggestTopics = (state.topicList || []).map(x => x && x.topic).filter(Boolean);
+
+      const freq = new Map();
+      (state.allItems || []).forEach(it => {
+        const s = String(it && it.summary || "");
+        tokenizeLoose(s).forEach(w => {
+          if (!w || w.length < 4) return;
+          if (STOPWORDS.has(w)) return;
+          freq.set(w, (freq.get(w) || 0) + 1);
+        });
+      });
+      _suggestKeywords = Array.from(freq.entries())
+        .sort((a,b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
+        .slice(0, 80)
+        .map(([w]) => w);
+    }
+
+    function buildSuggestions(query) {
+      const q = normalizeText(query || "");
+      const out = [];
+      const seen = new Set();
+
+      function addOne(s) {
+        const v = String(s || "").trim();
+        if (!v) return;
+        const key = normalizeText(v);
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push(v);
+      }
+
+      if (ENABLE_SEARCH_RECENT) {
+        const rec = loadRecentSearches();
+        rec.forEach(r => {
+          if (!q || normalizeText(r).includes(q)) addOne(r);
+        });
+      }
+
+      _suggestTopics.forEach(t => {
+        if (out.length >= 10) return;
+        if (!q || normalizeText(t).includes(q)) addOne(t);
+      });
+
+      _suggestKeywords.forEach(k => {
+        if (out.length >= 10) return;
+        if (q && normalizeText(k).includes(q)) addOne(k);
+      });
+
+      if (q) _suggestTitles.forEach(t => {
+        if (out.length >= 10) return;
+        if (!q || normalizeText(t).includes(q)) addOne(t);
+      });
+
+      return out.slice(0, 10);
+    }
+
+    function hideSuggest() {
+      if (!searchSuggestPanel) return;
+      searchSuggestPanel.classList.add("hidden");
+      searchSuggestPanel.innerHTML = "";
+    }
+
+    function showSuggest() {
+      if (!searchSuggestPanel) return;
+      searchSuggestPanel.classList.remove("hidden");
+    }
+
+    function renderSuggestList() {
+      if (!ENABLE_SEARCH_SUGGEST || !searchSuggestPanel) return;
+      const suggestions = buildSuggestions(searchInput.value);
+      if (!suggestions.length) {
+        hideSuggest();
+        return;
+      }
+
+      searchSuggestPanel.innerHTML = suggestions.map(s =>
+        `<button type="button" data-suggest="${escapeHtml(s)}" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2">
+           <svg class="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+             <circle cx="11" cy="11" r="7"></circle>
+             <path d="M21 21l-4.3-4.3"></path>
+           </svg>
+           <span class="text-sm text-gray-800">${escapeHtml(s)}</span>
+         </button>`
+      ).join("");
+
+      showSuggest();
+    }
+
+    function syncSearchClearBtn() {
+      if (!searchClearBtn) return;
+      searchClearBtn.classList.toggle("hidden", !searchInput.value);
+    }
+
+    async function doSearch(opts = {}) {
+      const rawInputQuery = searchInput.value.trim();
+      state.searchQuery = normalizeUserQueryForSearch_(rawInputQuery);
+      if (opts && opts.remember) rememberRecentSearch(rawInputQuery || state.searchQuery);
+      if (opts && opts.closeSuggest) hideSuggest();
+
+      const q = state.searchQuery;
+
+      // Empty query -> reset
+      if (!q) {
+        clearOverrideResults_();
+        clearInPdfState_();
+        applyFilters();
+        return;
+      }
+
+      // Click/Search/Enter means user is done typing: kick off in-PDF immediately (no debounce)
+      if (q.length >= 3) {
+        // show "searching PDFs…" immediately; results will merge when ready
+        state.inPdfSearching = true;
+        runInPdfBackground_(q).then(() => {
+          // merge results (keep page)
+          applyFilters(true);
+        });
+      } else {
+        clearInPdfState_();
+      }
+
+      // AI Mode: run AI rerank on demand (Search/Enter)
+      if (state.aiMode) {
+        try {
+          showToast("AI Mode: searching…");
+
+          // Candidate set from local strong search (title+summary+tags)
+          const parsed = parseQuery(q);
+          const scored = state.allItems
+            .map(it => ({ it, s: matchQuery(it, parsed) ? scoreQuery(it, parsed) : -9999 }))
+            .filter(x => x.s > -9999)
+            .sort((a,b) => b.s - a.s)
+            .slice(0, 50);
+
+          let candidates = scored.map(x => String(x.it.id));
+
+          // If we already have in-PDF hits for this query, expand candidates (best-effort)
+          const key = normalizeQueryKey_(q);
+          if (state.inPdfIds instanceof Set && state.inPdfQueryKey === key) {
+            const set = new Set(candidates);
+            for (const id of state.inPdfIds) {
+              if (!set.has(id)) { candidates.push(id); set.add(id); }
+            }
+          }
+
+          const out = await remoteAiSearchIds_(q, candidates, 30);
+
+          if (out.ok === true && Array.isArray(out.ids)) {
+            setOverrideResults_(out.ids, "AI Mode");
+            applyFilters();
+            return;
+          }
+
+          if (out && out.quota) {
+            showToast(out.message || "AI Mode daily limit reached.");
+          } else {
+            showToast(out.message || "AI Mode unavailable. Showing normal results.");
+          }
+          clearOverrideResults_();
+          applyFilters();
+          return;
+        } catch (e) {
+          showToast("AI Mode error. Showing normal results.");
+          clearOverrideResults_();
+          applyFilters();
+          return;
+        }
+      }
+
+      // Normal mode: local results are already filtered live; just ensure UI is updated.
+      clearOverrideResults_();
+      applyFilters();
+    }
+    searchBtn.addEventListener("click", () => doSearch({ remember: true, closeSuggest: true }));
+    searchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch({ remember: true, closeSuggest: true }); });
+
+    let inPdfTimeout = null;
+    searchInput.addEventListener("input", () => {
+      syncSearchClearBtn();
+
+      // Always show local results instantly while typing (normalized for natural language queries)
+      state.searchQuery = normalizeUserQueryForSearch_(searchInput.value.trim());
+
+      // While typing, show normal results (clear any AI override)
+      if (state.overrideLabel) clearOverrideResults_();
+
+      // New query -> clear old in-PDF hits
+      const key = normalizeQueryKey_(state.searchQuery);
+      if (state.inPdfQueryKey && state.inPdfQueryKey !== key) {
+        state.inPdfIds = null;
+        state.inPdfAdditionalCount = 0;
+      }
+
+      applyFilters();
+
+      clearTimeout(inPdfTimeout);
+
+      if (!state.searchQuery || state.searchQuery.length < 3) {
+        clearInPdfState_();
+        return;
+      }
+
+      // Queue background in-PDF search after 700ms of inactivity
+      state.inPdfSearching = true;
+      applyFilters(true);
+
+      inPdfTimeout = setTimeout(async () => {
+        const q = state.searchQuery.trim();
+        const k = normalizeQueryKey_(q);
+        if (q.length < 3) return;
+
+        await runInPdfBackground_(q);
+        // Merge without resetting page
+        if (normalizeQueryKey_(state.searchQuery) === k) applyFilters(true);
+      }, 700);
+    });
+
+    if (searchClearBtn) {
+      searchClearBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        syncSearchClearBtn();
+
+        hideSuggest();
+        doSearch();
+        searchInput.focus();
+      });
+    }
+
+    if (ENABLE_SEARCH_SUGGEST) {
+      searchInput.addEventListener("focus", () => {
+        renderSuggestList();
+      });
+      searchInput.addEventListener("input", () => {
+        syncSearchClearBtn();
+        renderSuggestList();
+      });
+
+      if (searchSuggestPanel) {
+        searchSuggestPanel.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-suggest]");
+          if (!btn) return;
+          const v = btn.getAttribute("data-suggest") || "";
+          searchInput.value = v;
+          syncSearchClearBtn();
+          hideSuggest();
+          doSearch({ remember: true, closeSuggest: true });
+        });
+      }
+
+      document.addEventListener("click", (e) => {
+        if (searchWrap && !searchWrap.contains(e.target)) hideSuggest();
+      });
+    }
+
+    syncSearchClearBtn();
+
+
+    // A/B search mode toggles
+    const inPdfBtn = document.getElementById("inPdfBtn");
+    const aiModeBtn = document.getElementById("aiModeBtn");
+    const stickyInPdfBtn = document.getElementById("stickyInPdfBtn");
+    const stickyAiModeBtn = document.getElementById("stickyAiModeBtn");
+
+    function styleToggle_(btn, on) {
+      if (!btn) return;
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      btn.classList.toggle("bg-gray-900", on);
+      btn.classList.toggle("text-white", on);
+      btn.classList.toggle("border-gray-900", on);
+      btn.classList.toggle("bg-white", !on);
+      btn.classList.toggle("text-gray-700", !on);
+      btn.classList.toggle("border-gray-200", !on);
+    }
+    function syncModeUi_() {
+      styleToggle_(inPdfBtn, state.inPdfMode);
+      styleToggle_(stickyInPdfBtn, state.inPdfMode);
+      styleToggle_(aiModeBtn, state.aiMode);
+      styleToggle_(stickyAiModeBtn, state.aiMode);
+    }
+
+    function setInPdfMode_(on) {
+      state.inPdfMode = !!on;
+      if (!state.inPdfMode) {
+        // Only clear override if we were showing In-PDF results (AI has its own label)
+        if (state.overrideLabel === "In-PDF") clearOverrideResults_();
+      }
+      syncModeUi_();
+    }
+    function setAiMode_(on) {
+      state.aiMode = !!on;
+      if (!state.aiMode) {
+        if (state.overrideLabel === "AI Mode") clearOverrideResults_();
+      }
+      syncModeUi_();
+    }
+
+    if (aiModeBtn) aiModeBtn.addEventListener("click", () => { setAiMode_(!state.aiMode); });
+    if (stickyAiModeBtn) stickyAiModeBtn.addEventListener("click", () => { setAiMode_(!state.aiMode); });
+
+    syncModeUi_();
+
+    clearBtn.addEventListener("click", () => {
+      state.searchQuery = "";
+      searchInput.value = "";
+      state.selectedTopics.clear();
+      state.selectedCategories.clear();
+      state.selectedYears.clear();
+      state.wsStatusFilter = "all";
+      state.wsTagFilter = "";
+      wsStatusFilter.value = "all";
+      wsTagFilter.value = "";
+
+      document.querySelectorAll("#topicFilters input[type=checkbox], #categoryFilters input[type=checkbox], #yearFilters input[type=checkbox]")
+        .forEach(cb => cb.checked = false);
+
+      applyFilters();
+    });
+
+    toggleReading.addEventListener("click", () => {
+      const wrap = document.getElementById("readingListWrap");
+      const isHidden = wrap.classList.contains("hidden");
+      if (isHidden) {
+        wrap.classList.remove("hidden");
+        toggleReading.textContent = "Hide";
+      } else {
+        wrap.classList.add("hidden");
+        toggleReading.textContent = "Show";
+      }
+    });
+    clearReading.addEventListener("click", () => {
+      readingSet([]);
+      renderReadingList();
+      render();
+    });
+
+    wsStatusFilter.addEventListener("change", () => {
+      state.wsStatusFilter = wsStatusFilter.value;
+      applyFilters();
+    });
+    wsTagFilter.addEventListener("input", () => {
+      state.wsTagFilter = wsTagFilter.value;
+      applyFilters();
+    });
+    exportWsBtn.addEventListener("click", exportWorkspace);
+
+    clearCompareBtn.addEventListener("click", () => {
+      compareSet([]);
+      renderCompare();
+      render();
+      closeCompareModalUIOnly();
+    });
+
+    // Compare picker (search and compare panel)
+    const compareLeftInput = document.getElementById("compareSearchLeft");
+    const compareRightInput = document.getElementById("compareSearchRight");
+    const compareLeftPanel = document.getElementById("compareSuggestLeft");
+    const compareRightPanel = document.getElementById("compareSuggestRight");
+    const openCompareBtn = document.getElementById("openCompareBtn");
+
+    function buildCompareSuggestions_(query, excludeId) {
+      const qn = normalizeText(query || "");
+      const arr = (state.allItems || []).slice();
+      // Prefer newest by addedAt when query is empty
+      arr.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+
+      const out = [];
+      for (const it of arr) {
+        if (!it) continue;
+        const id = String(it.id);
+        if (excludeId && String(excludeId) === id) continue;
+        const t = String(it.title || "");
+        if (qn) {
+          if (!normalizeText(t).includes(qn)) continue;
+        }
+        out.push({ id, title: t });
+        if (out.length >= 8) break;
+      }
+      return out;
+    }
+
+    function hideCompareSuggest_(panel) {
+      if (!panel) return;
+      panel.classList.add("hidden");
+      panel.innerHTML = "";
+    }
+
+    function renderCompareSuggest_(side) {
+      const input = (side === "left") ? compareLeftInput : compareRightInput;
+      const panel = (side === "left") ? compareLeftPanel : compareRightPanel;
+      if (!input || !panel) return;
+
+      const other = (side === "left") ? (compareRightInput?.getAttribute("data-selected-id") || "") : (compareLeftInput?.getAttribute("data-selected-id") || "");
+      const items = buildCompareSuggestions_(input.value, other);
+
+      if (!items.length) {
+        hideCompareSuggest_(panel);
+        return;
+      }
+
+      panel.innerHTML = items.map(it =>
+        `<button type="button" data-cpid="${escapeHtml(it.id)}" data-cpside="${side}" class="w-full text-left px-3 py-2 hover:bg-gray-50">
+           <div class="text-sm text-gray-800 truncate">${escapeHtml(it.title || it.id)}</div>
+         </button>`
+      ).join("");
+
+      panel.classList.remove("hidden");
+    }
+
+    function setCompareSide_(side, id, title) {
+      const cur = compareGet();
+      let left = cur[0] || "";
+      let right = cur[1] || "";
+
+      // compareSet() cannot represent a right-only selection; if the first pick happens on the right, treat it as the left pick.
+      if (side === "right" && !left && !right) side = "left";
+
+      if (side === "left") left = String(id || "");
+      else right = String(id || "");
+
+      if (left && right && String(left) === String(right)) {
+        // avoid comparing the same report to itself
+        if (side === "left") right = "";
+        else left = "";
+      }
+
+      const next = [];
+      if (left) next.push(left);
+      if (right) next.push(right);
+      compareSet(next);
+      renderCompare();
+      render();
+      closeCompareModalUIOnly();
+
+      if (side === "left" && compareLeftInput) {
+        compareLeftInput.value = String(title || "");
+        compareLeftInput.setAttribute("data-selected-id", left);
+        hideCompareSuggest_(compareLeftPanel);
+      }
+      if (side === "right" && compareRightInput) {
+        compareRightInput.value = String(title || "");
+        compareRightInput.setAttribute("data-selected-id", right);
+        hideCompareSuggest_(compareRightPanel);
+      }
+    }
+
+    function setupComparePickers_() {
+      if (compareLeftInput) {
+        compareLeftInput.addEventListener("focus", () => renderCompareSuggest_("left"));
+        compareLeftInput.addEventListener("input", () => renderCompareSuggest_("left"));
+        compareLeftInput.addEventListener("keydown", (ev) => {
+          if (ev.key === "Escape") hideCompareSuggest_(compareLeftPanel);
+        });
+      }
+
+      if (compareRightInput) {
+        compareRightInput.addEventListener("focus", () => renderCompareSuggest_("right"));
+        compareRightInput.addEventListener("input", () => renderCompareSuggest_("right"));
+        compareRightInput.addEventListener("keydown", (ev) => {
+          if (ev.key === "Escape") hideCompareSuggest_(compareRightPanel);
+        });
+      }
+
+      if (compareLeftPanel) {
+        compareLeftPanel.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-cpid]");
+          if (!btn) return;
+          const id = btn.getAttribute("data-cpid") || "";
+          const side = btn.getAttribute("data-cpside") || "left";
+          const title = btn.textContent.trim();
+          setCompareSide_(side, id, title);
+        });
+      }
+
+      if (compareRightPanel) {
+        compareRightPanel.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-cpid]");
+          if (!btn) return;
+          const id = btn.getAttribute("data-cpid") || "";
+          const side = btn.getAttribute("data-cpside") || "right";
+          const title = btn.textContent.trim();
+          setCompareSide_(side, id, title);
+        });
+      }
+
+      document.addEventListener("click", (e) => {
+        if (compareLeftPanel && compareLeftInput && !compareLeftPanel.contains(e.target) && e.target !== compareLeftInput) {
+          hideCompareSuggest_(compareLeftPanel);
+        }
+        if (compareRightPanel && compareRightInput && !compareRightPanel.contains(e.target) && e.target !== compareRightInput) {
+          hideCompareSuggest_(compareRightPanel);
+        }
+      });
+
+      // Compare button opens the existing compare overlay modal
+      if (openCompareBtn) {
+        openCompareBtn.addEventListener("click", (e) => {
+          const ids = compareGet();
+          if (ids.length === 2) {
+            e.preventDefault();
+            openCompareModal(ids[0], ids[1]);
+          }
+        });
+      }
+    }
+
+    setupComparePickers_();
+
+
+    refreshBtn.addEventListener("click", async () => {
+      refreshStatus.textContent = "Refreshing…";
+      try {
+        const data = prepareItems(await loadData(true));
+        state.allItems = data;
+        cacheSet(data);
+        buildFacetFilters();
+        refreshSearchSuggestData();
+
+        const { newCount } = computeNewMarkers_(data);
+        setLiveHeaderStatus({ updatedAt: catalogMaxTimestamp_(data), newCount });
+      commitSeenMaxOnce_(data);
+
+        if (ENABLE_REMOTE_LIKES) {
+          try { await remoteLikesPrime_();
+    try { await remoteCommentsPrime_(); } catch (e) { /* comments optional */ }
+ } catch (e) {}
+        }
+
+        applyFilters();
+        renderReadingList();
+        renderCompare();
+        refreshStatus.textContent = "Last updated: " + formatTime(Date.now());
+      } catch (e) {
+        refreshStatus.textContent = e.message;
+      }
+    });
+
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > 300) backToTopBtn.classList.remove("hidden");
+      else backToTopBtn.classList.add("hidden");
+
+      // Sticky search dock (desktop)
+      updateStickySearchDock_();
+      syncLoadMoreBtnVisibility_();
+    });
+    backToTopBtn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+
+    function handleLoadMoreClick_() {
+      const total = state.filteredItems.length;
+      const maxShown = state.page * state.pageSize;
+      if (maxShown >= total) {
+        showToast("All reports loaded.");
+        return;
+      }
+      state.page += 1;
+      render();
+      // Keep UX obvious for manual mode on slow devices.
+      showToast("Loaded more publications.");
+    }
+
+    const loadMoreBtn = document.getElementById("loadMoreBtn");
+    if (loadMoreBtn) loadMoreBtn.addEventListener("click", handleLoadMoreClick_);
+
+    // Initialize sticky dock once
+    updateStickySearchDock_();
+
+
+    // Event delegation for card actions + reading list preview buttons
+    document.getElementById("cardsContainer").addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const action = btn.getAttribute("data-action");
+      const id = btn.getAttribute("data-id");
+      if (!id) return;
+
+      const item = state.allItems.find(x => String(x.id) === String(id));
+
+      if (action === "modal") openPdfModalById(id);
+      if (action === "reading") toggleReadingItem(id);
+      if (action === "compare") toggleCompare(id);
+
+      if (action === "pin") {
+        const pinned = wsPinned(id);
+        wsSetItem(id, { pinned: !pinned });
+        renderCompare();
+        applyFilters();
+      }
+
+      if (action === "notebooklm" && item) openInNotebookLM(item);
+      if (action === "aisummary" && item) openSummaryModal(item);
+
+      if (action === "like") {
+        try {
+          if (ENABLE_REMOTE_LIKES) {
+            btn.disabled = true;
+            await remoteToggleLike_(id);
+            if (state.sortMode === "liked") applyFilters(true);
+            else render();
+            showToast(isLiked(id) ? "Liked." : "Unliked.");
+          } else {
+            toggleLike(id);
+            if (state.sortMode === "liked") applyFilters(true);
+            else render();
+            showToast(isLiked(id) ? "Liked (local)." : "Unliked (local).");
+          }
+        } catch (err) {
+          // fallback so UX still works
+          toggleLike(id);
+          render();
+          showToast("Like backend failed. Using local like.");
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      if (action === "share" && item) {
+        const url = reportPageUrl(item.id, item.title || "");
+        try {
+          if (navigator.share) {
+            await navigator.share({ title: item.title || "dotdock", url });
+            showToast("Share opened.");
+          } else {
+            await navigator.clipboard.writeText(location.origin + "/" + url);
+            showToast("Link copied.");
+          }
+        } catch {
+          try {
+            await navigator.clipboard.writeText(location.origin + "/" + url);
+            showToast("Link copied.");
+          } catch {
+            showToast("Copy failed. Open report and share manually.");
+          }
+        }
+      }
+
+      if (action === "comment_toggle") {
+        const panel = document.querySelector(`[data-comments-panel="${CSS.escape(String(id))}"]`);
+        if (!panel) return;
+        const isOpen = !panel.classList.contains("hidden");
+        panel.classList.toggle("hidden", isOpen);
+        if (!isOpen) {
+          await loadCommentsPreview_(id);
+        }
+      }
+
+      if (action === "comment_post") {
+        const ta = document.querySelector(`[data-comment-input="${CSS.escape(String(id))}"]`);
+        const text = (ta && ta.value ? ta.value.trim() : "");
+        if (!text) { showToast("Write a comment first."); return; }
+        btn.disabled = true;
+        try {
+          await remoteCommentAdd_(id, text, "");
+          if (ta) ta.value = "";
+          updateCommentCountBadges_();
+          await loadCommentsPreview_(id, true);
+          showToast("Comment posted.");
+        } catch (e) {
+          showToast("Comments unavailable. Check Apps Script deployment.");
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+    });
+
+    document.getElementById("readingListWrap").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const action = btn.getAttribute("data-action");
+      const id = btn.getAttribute("data-id");
+      if (!id) return;
+      if (action === "modal") openPdfModalById(id);
+      if (action === "reading") toggleReadingItem(id);
+      if (action === "compare") toggleCompare(id);
+    });
+
+    document.getElementById("compareWrap").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action='compare']");
+      if (!btn) return;
+      const id = btn.getAttribute("data-id");
+      if (id) toggleCompare(id);
+    });
+
+    // Instant-load cached data on Home to improve first paint.
+    // For Added Today, keep fresh-first behavior to avoid "0 added today" stale flashes.
+    const preferFreshFirst = state.tab === "today";
+    const cachedMeta = cacheGetMeta_();
+    const cacheAgeMs = (cachedMeta && typeof cachedMeta.time === "number")
+      ? (Date.now() - cachedMeta.time)
+      : Number.POSITIVE_INFINITY;
+    const allowCachedFirst = !preferFreshFirst && cacheAgeMs <= CACHE_TTL_MS;
+    const cached = allowCachedFirst ? cacheGet() : null;
+    if (cached) {
+      state.allItems = prepareItems(cached);
+      buildFacetFilters();
+      refreshSearchSuggestData();
+
+      // Header pills: show cache time + "new" count without advancing baseline yet
+      const peekNew = (computeNewMarkers_(state.allItems).newCount || 0);
+      setLiveHeaderStatus({ updatedAt: catalogMaxTimestamp_(state.allItems), newCount: peekNew });
+
+      if (ENABLE_REMOTE_LIKES) {
+  remoteLikesPrime_().then(() => {
+    if (state.sortMode === "liked") applyFilters(true);
+    else render();
+  }).catch(() => {});
+}
+// Prime comment counts (cached instantly, then fresh)
+remoteCommentsPrime_({ useCache: true }).catch(() => {});
+
+      applyFilters();
+      renderReadingList();
+      renderCompare();
+      document.getElementById("resultsInfo").textContent =
+        cacheAgeMs <= CACHE_PREFER_MS
+          ? "Loaded from cache. Syncing latest…"
+          : "Showing cached snapshot while syncing latest…";
+    } else {
+      // Keep header pill visible while first load runs
+      setLiveHeaderStatus({ updatedAt: 0, newCount: 0 });
+      renderCardSkeletons(state.pageSize);
+      document.getElementById("resultsInfo").textContent = "Loading publications…";
+      if (preferFreshFirst) {
+        document.getElementById("resultsInfo").textContent = "Loading latest reports…";
+      }
+    }
+
+    // Fetch network data (cache-friendly first request)
+    try {
+      const data = prepareItems(await loadData(false));
+      state.allItems = data;
+      cacheSet(data);
+      buildFacetFilters();
+      refreshSearchSuggestData();
+
+      const { newCount } = computeNewMarkers_(data);
+      setLiveHeaderStatus({ updatedAt: catalogMaxTimestamp_(data), newCount });
+      commitSeenMaxOnce_(data);
+
+      if (ENABLE_REMOTE_LIKES) {
+        try { await remoteLikesPrime_(); } catch (e) {}
+      }
+      // Prime comment counts (cached instantly, then fresh)
+      try { await remoteCommentsPrime_({ useCache: true }); } catch (e) {}
+
+      applyFilters();
+      renderReadingList();
+      renderCompare();
+      refreshStatus.textContent = "Last updated: " + formatTime(Date.now());
+    } catch (e) {
+      if (!cached) {
+        const infoEl = document.getElementById("resultsInfo");
+        if (e && e.code === "TIMEOUT") {
+          infoEl.textContent = "Server is slow. Retrying…";
+          try {
+            const retry = prepareItems(await loadData(true));
+            state.allItems = retry;
+            cacheSet(retry);
+            buildFacetFilters();
+            refreshSearchSuggestData();
+            const { newCount } = computeNewMarkers_(retry);
+            setLiveHeaderStatus({ updatedAt: catalogMaxTimestamp_(retry), newCount });
+            commitSeenMaxOnce_(retry);
+            applyFilters();
+            renderReadingList();
+            renderCompare();
+            refreshStatus.textContent = "Last updated: " + formatTime(Date.now());
+          } catch (retryErr) {
+            infoEl.textContent = "Still loading from server… please wait.";
+          }
+        } else {
+          infoEl.textContent = "Error loading data: " + e.message;
+        }
+      }
+    }
+
+    // Quick second pull shortly after first load to pick up very recent Drive index updates.
+    setTimeout(async () => {
+      try {
+        const fresh = prepareItems(await loadData(true));
+        const sig = (arr) => `${arr.length}|${Math.max(...arr.map(x => x.modified || 0))}`;
+        if (sig(fresh) === sig(state.allItems || [])) return;
+
+        state.allItems = fresh;
+        cacheSet(fresh);
+        buildFacetFilters();
+        refreshSearchSuggestData();
+        const { newCount } = computeNewMarkers_(fresh);
+        setLiveHeaderStatus({ updatedAt: catalogMaxTimestamp_(fresh), newCount });
+        applyFilters(true);
+        renderReadingList();
+        renderCompare();
+        showToast("Latest files loaded.");
+      } catch (e) {
+        // Silent fallback: keep current view if follow-up fetch fails.
+      }
+    }, 15000);
+
+    sortSelect.value = state.sortMode;
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closePdfModal();
+        closeHelpModal();
+        closeSummaryModal();
+        helpDd.classList.add("hidden");
+        closeCompareModalAndClear();
+      }
+    });
+
+    setupNewPostsBtn_();
+    setupInfiniteScroll();
+  });
+</script>
+
+  <!-- New reports floating button (shows only when there are unseen new items) -->
+  <button id="newPostsBtn"
+          class="hidden fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-2 rounded-full shadow hover:bg-blue-700 text-sm font-semibold">
+    ↑ New reports
+  </button>
+
+</body>
+</html>

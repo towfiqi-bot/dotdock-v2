@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>dotdock — Report</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; }
+    .brand-title { font-family: 'Playfair Display', serif; letter-spacing: 0.03em; }
+    .brand-tagline { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; }
+  </style>
+</head>
+
+<body class="bg-gray-50">
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4">
+      <div class="flex items-center gap-4">
+        <a href="index.html" class="block" aria-label="Back to catalog">
+          <img src="logo.png" alt="dotdock logo"
+               class="h-12 w-12 md:h-16 md:w-16 rounded-full object-cover shadow-md border border-gray-200 bg-white">
+        </a>
+        <div>
+          <h1 class="brand-title text-2xl md:text-3xl font-semibold text-gray-900">dotdock</h1>
+          <p class="brand-tagline text-amber-600 mt-1">Where report insights come together.</p>
+          <p class="text-xs text-gray-500 mt-1 tracking-[0.14em] uppercase">Report</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <!-- Top row -->
+    <div id="topRow" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+      <div>
+        <div id="rTitle" class="text-xl md:text-2xl font-semibold text-gray-900">Loading…</div>
+        <div id="rMetaLine" class="text-sm text-gray-600 mt-1"></div>
+      </div>
+
+      <!-- Share -->
+      <div id="shareWrap" class="flex flex-wrap gap-2">
+        <button id="copyLinkBtn"
+                class="inline-flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+          <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1"></path>
+            <path d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1"></path>
+          </svg>
+          <span class="shareText">Copy link</span>
+        </button>
+
+        <a id="shareX" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+          <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4L20 20"></path>
+            <path d="M20 4L4 20"></path>
+          </svg>
+          <span>X</span>
+        </a>
+
+        <a id="shareLI" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+          <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <path d="M8 11v7"></path>
+            <path d="M8 8h.01"></path>
+            <path d="M12 11v7"></path>
+            <path d="M12 14a2 2 0 0 1 4 0v4"></path>
+          </svg>
+          <span>LinkedIn</span>
+        </a>
+
+        <a id="shareFB" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+          <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+          </svg>
+          <span>Facebook</span>
+        </a>
+
+        <a id="shareWA" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+          <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 11.5a8.5 8.5 0 1 1-15.2 5.3L3 21l4.2-1.8A8.5 8.5 0 0 1 21 11.5z"></path>
+            <path d="M9 10.5c.6 2.1 2.4 3.9 4.5 4.5"></path>
+          </svg>
+          <span>WhatsApp</span>
+        </a>
+
+        <a id="shareEmail"
+           class="inline-flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+          <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path>
+            <path d="m22 6-10 7L2 6"></path>
+          </svg>
+          <span>Email</span>
+        </a>
+      </div>
+    </div>
+
+
+    <!-- AI summary -->
+    <section id="aiSummarySection" class="mb-6 bg-white border border-gray-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold text-gray-900">AI summary</h2>
+      </div>
+      <div id="aiSummaryText" class="mt-3 text-sm text-gray-800 whitespace-pre-wrap leading-relaxed"></div>
+    </section>
+
+    <!-- Content grid -->
+    <div id="grid" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Left: details (sticky + scrollable on desktop) -->
+      <section id="detailsCol" class="lg:col-span-5 space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto lg:pr-1">
+        <div class="bg-white border border-gray-200 rounded-lg p-4">
+          <div class="flex gap-4">
+            <!-- Tiny placeholder avoids broken-image icon -->
+            <img id="rThumb"
+                 src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                 alt="Cover" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                 class="w-28 h-40 object-cover rounded border border-gray-200 bg-gray-100"
+                 onerror="this.style.display='none'; document.getElementById('thumbFallback').classList.remove('hidden');">
+            <div id="thumbFallback" class="hidden w-28 h-40 rounded border border-gray-200 bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+              No cover
+            </div>
+
+            <div class="flex-1">
+              <table class="w-full text-sm border border-gray-200">
+                <tbody id="metaTableBody"></tbody>
+              </table>
+
+              <div class="mt-3 flex flex-wrap gap-2">
+                <a id="viewBtn" target="_blank" rel="noopener"
+                   class="inline-flex items-center px-4 py-2 text-sm font-semibold bg-amber-600 text-white rounded hover:bg-amber-700">
+                  View PDF (new tab)
+                </a>
+
+                <button id="addReadingBtn"
+                        class="px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
+                  Add to reading list
+                </button>
+
+                <button id="notebookBtn"
+                        class="px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
+                  NotebookLM
+                </button>
+
+                <button id="compareBtn"
+                        class="px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
+                  Compare
+                </button>
+              </div>
+
+              <div id="statusLine" class="text-xs text-gray-500 mt-2"></div>
+              <div id="compareHint" class="hidden text-xs text-amber-700 mt-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- You may also like -->
+        <div class="bg-white border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-800">You may also like</h2>
+            <a href="index.html" class="text-xs font-semibold text-amber-700 hover:underline">Browse</a>
+          </div>
+
+          <div id="recoWrap" class="mt-3 text-sm text-gray-600">
+            Loading…
+          </div>
+        </div>
+
+        <!-- My workspace -->
+        <div class="bg-white border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-800">My workspace</h2>
+            <button id="exportWsBtn" class="text-xs font-semibold text-amber-700 hover:underline">Export</button>
+          </div>
+
+          <label class="block text-xs text-gray-600 mt-3">Status</label>
+          <select id="wsStatus" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white">
+            <option value="unread">Unread</option>
+            <option value="reading">Reading</option>
+            <option value="done">Done</option>
+          </select>
+
+          <label class="block text-xs text-gray-600 mt-3">Tags (comma-separated)</label>
+          <input id="wsTags" type="text"
+                 class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                 placeholder="e.g., energy, productivity" />
+
+          <label class="block text-xs text-gray-600 mt-3">Notes</label>
+          <textarea id="wsNotes" rows="6"
+                    class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                    placeholder="Your notes for this report…"></textarea>
+
+          <div class="mt-3 flex gap-2">
+            <button id="pinBtn"
+                    class="px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
+              Pin
+            </button>
+          </div>
+
+          <div class="text-[11px] text-gray-500 mt-2">
+            Saved locally in your browser (no login).
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: embedded PDF -->
+      <section id="readerCol" class="lg:col-span-7">
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+          <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <div class="text-sm font-semibold text-gray-800">Reader</div>
+            <a href="index.html" class="text-sm text-amber-700 hover:underline">Back to catalog</a>
+          </div>
+
+          <iframe id="pdfFrame"
+                  class="w-full"
+                  style="height: 75vh;"
+                  title="PDF viewer"
+                  src=""
+                  loading="lazy"></iframe>
+        </div>
+      </section>
+    </div>
+
+    <div id="errorBox" class="hidden mt-6 bg-red-50 border border-red-200 text-red-800 rounded-lg p-4">
+      <div class="font-semibold">Error</div>
+      <div id="errorText" class="mt-1 text-sm"></div>
+    </div>
+  
+      <section id="comments" class="mt-8 bg-white border border-gray-200 rounded-lg p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold text-gray-900">Comments</h2>
+          <div class="text-sm text-gray-500"><span id="commentCount">0</span> total</div>
+        </div>
+
+        <div id="commentsStatus" class="mt-2 text-sm text-gray-500">Loading…</div>
+        <div id="commentsList" class="mt-3 space-y-3"></div>
+
+        <div class="mt-4 border-t border-gray-100 pt-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Add a comment</label>
+          <textarea id="commentText" rows="3"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            placeholder="Write something..."></textarea>
+          <div class="mt-2 flex items-center justify-between">
+            <div class="text-xs text-gray-500">Be respectful — comments are public.</div>
+            <button id="commentPostBtn"
+              class="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded hover:bg-blue-700">
+              Post
+            </button>
+          </div>
+        </div>
+      </section>
+
+</main>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm px-4 py-2 rounded shadow-lg"></div>
+
+<script>
+  const DATA_URL = "https://script.google.com/macros/s/AKfycbxme0FmUWdOmNG5EVHKxkQkbm0alqCo6vWJgESo8SBzwIQunlTU0f9MdGlEqu2AqkQa/exec";
+
+  const CACHE_KEY = "pdf_catalog_cache_v2";
+  const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+
+  const READING_KEY = "dotdock_reading_list_v1";
+  const WORKSPACE_KEY = "dotdock_workspace_v1";
+  const COMPARE_KEY = "dotdock_compare_v1";
+
+  function esc(s) {
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+
+  function escapeHtml(s) { return esc(s); }
+
+  const DEVICE_ID_KEY = "dotdock_device_id_v1";
+  const USER_NAME_KEY = "dotdock_comment_name_v1";
+
+  function getDeviceId_() {
+    try {
+      let v = localStorage.getItem(DEVICE_ID_KEY);
+      if (!v) {
+        v = (typeof crypto !== "undefined" && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : ("dev_" + Math.random().toString(16).slice(2) + Date.now());
+        localStorage.setItem(DEVICE_ID_KEY, v);
+      }
+      return v;
+    } catch {
+      return "dev_fallback";
+    }
+  }
+
+  function getUserName_(promptIfMissing=false) {
+    try {
+      let v = localStorage.getItem(USER_NAME_KEY) || "";
+      if (v === "__anon__") return "";
+      v = String(v).trim();
+      if (v) return v;
+
+      if (!promptIfMissing) return "";
+
+      let entered = (prompt("Display name for comments (optional). Leave blank to stay Anonymous:", "") || "").trim();
+      entered = entered.slice(0, 40);
+      if (entered) {
+        localStorage.setItem(USER_NAME_KEY, entered);
+        return entered;
+      }
+      localStorage.setItem(USER_NAME_KEY, "__anon__");
+      return "";
+    } catch {
+      return "";
+    }
+  }
+
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.remove("hidden");
+    clearTimeout(showToast._to);
+    showToast._to = setTimeout(() => t.classList.add("hidden"), 2200);
+  }
+
+  function cacheGet() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.time || !parsed?.data) return null;
+      // stale cache is still used for instant load; this page fetches fresh after render.
+      // if (Date.now() - parsed.time > CACHE_TTL_MS) return null;
+      return parsed.data;
+    } catch { return null; }
+  }
+
+  function drivePreviewUrl(fileId) {
+    return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
+  }
+
+  function driveShareUrl(fileId) {
+    return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view?usp=sharing`;
+  }
+
+  function viewUrl(fileId, title) {
+    const base = `report.html?id=${encodeURIComponent(fileId)}&view=1`;
+    return title ? `${base}&t=${encodeURIComponent(title)}` : base;
+  }
+
+  function reportUrl(fileId, title) {
+    const base = `report.html?id=${encodeURIComponent(fileId)}`;
+    return title ? `${base}&t=${encodeURIComponent(title)}` : base;
+  }
+
+  // Reading list
+  function readingGet() {
+    try {
+      const raw = localStorage.getItem(READING_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.map(String) : [];
+    } catch { return []; }
+  }
+  function readingSet(arr) {
+    try { localStorage.setItem(READING_KEY, JSON.stringify(Array.from(new Set(arr.map(String))))); } catch {}
+  }
+  function isInReadingList(id) {
+    return readingGet().includes(String(id));
+  }
+  function toggleReading(id) {
+    const cur = readingGet();
+    const sid = String(id);
+    const next = cur.includes(sid) ? cur.filter(x => x !== sid) : [sid, ...cur];
+    readingSet(next);
+  }
+
+  // Workspace
+  function workspaceGet() {
+    try {
+      const raw = localStorage.getItem(WORKSPACE_KEY);
+      const obj = raw ? JSON.parse(raw) : {};
+      return (obj && typeof obj === "object") ? obj : {};
+    } catch { return {}; }
+  }
+  function workspaceSet(obj) {
+    try { localStorage.setItem(WORKSPACE_KEY, JSON.stringify(obj)); } catch {}
+  }
+  function wsItem(id) {
+    const ws = workspaceGet();
+    return ws[String(id)] || {};
+  }
+  function wsSetItem(id, patch) {
+    const ws = workspaceGet();
+    const key = String(id);
+    const prev = ws[key] || {};
+    ws[key] = { ...prev, ...patch, updatedAt: Date.now() };
+    workspaceSet(ws);
+  }
+  function exportWorkspace() {
+    const ws = workspaceGet();
+    const data = JSON.stringify(ws, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "dotdock-workspace.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  // Compare
+  function compareGet() {
+    try {
+      const raw = localStorage.getItem(COMPARE_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.map(String).slice(0,2) : [];
+    } catch { return []; }
+  }
+  function compareSet(arr) {
+    try { localStorage.setItem(COMPARE_KEY, JSON.stringify(arr.slice(0,2).map(String))); } catch {}
+  }
+  function toggleCompare(id) {
+    const sid = String(id);
+    const cur = compareGet();
+    const next = cur.includes(sid) ? cur.filter(x => x !== sid) : [sid, ...cur].slice(0,2);
+    compareSet(next);
+    return next;
+  }
+
+  function setError(msg) {
+    document.getElementById("errorBox").classList.remove("hidden");
+    document.getElementById("errorText").textContent = msg;
+  }
+
+  function setShareLinks(pageUrl, title) {
+    const text = `${title} — via dotdock`;
+    document.getElementById("shareX").href =
+      `https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(text)}`;
+    document.getElementById("shareLI").href =
+      `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}`;
+    document.getElementById("shareFB").href =
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`;
+    document.getElementById("shareWA").href =
+      `https://wa.me/?text=${encodeURIComponent(text + " " + pageUrl)}`;
+    document.getElementById("shareEmail").href =
+      `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(pageUrl)}`;
+  }
+
+  function setMetaTable(item) {
+    const rows = [];
+    const year = item.year ? esc(item.year) : "—";
+    const cats = (item.categories || []).length ? esc(item.categories.join(", ")) : "—";
+    const updated = item.modified ? new Date(item.modified).toLocaleString() : "—";
+
+    rows.push(`<tr><td class="border border-gray-200 px-3 py-2 font-semibold w-32">Year</td><td class="border border-gray-200 px-3 py-2">${year}</td></tr>`);
+    rows.push(`<tr><td class="border border-gray-200 px-3 py-2 font-semibold">Category</td><td class="border border-gray-200 px-3 py-2">${cats}</td></tr>`);
+    rows.push(`<tr><td class="border border-gray-200 px-3 py-2 font-semibold">Updated</td><td class="border border-gray-200 px-3 py-2">${esc(updated)}</td></tr>`);
+
+    document.getElementById("metaTableBody").innerHTML = rows.join("");
+
+    // AI summary (full text, no truncation)
+    const sumEl = document.getElementById("aiSummaryText");
+    if (sumEl) {
+      const sum = (item && item.summary) ? String(item.summary) : "";
+      sumEl.textContent = sum ? sum : "—";
+    }
+  }
+
+  function renderItem(item) {
+    const title = item.title || "Untitled report";
+    document.getElementById("rTitle").textContent = title;
+    document.title = `dotdock — ${title}`;
+
+    const metaLine = [
+      item.year ? String(item.year) : null,
+      (item.categories || [])[0] || null
+    ].filter(Boolean).join(" • ");
+    document.getElementById("rMetaLine").textContent = metaLine;
+
+    if (item.thumbUrl) document.getElementById("rThumb").src = item.thumbUrl;
+
+    // Reader
+    document.getElementById("pdfFrame").src = drivePreviewUrl(item.id);
+    document.getElementById("viewBtn").href = viewUrl(item.id, item.title || "");
+
+    setMetaTable(item);
+
+    const pageUrl = window.location.href.split("#")[0];
+    setShareLinks(pageUrl, title);
+
+    // Buttons state
+    const addBtn = document.getElementById("addReadingBtn");
+    addBtn.textContent = isInReadingList(item.id) ? "Remove from reading list" : "Add to reading list";
+
+    // Workspace state
+    const ws = wsItem(item.id);
+    document.getElementById("wsStatus").value = (ws.status || "unread").toLowerCase();
+    document.getElementById("wsTags").value = Array.isArray(ws.tags) ? ws.tags.join(", ") : "";
+    document.getElementById("wsNotes").value = ws.notes || "";
+    document.getElementById("pinBtn").textContent = ws.pinned ? "Unpin" : "Pin";
+
+    // Compare state
+    const compared = compareGet().includes(String(item.id));
+    document.getElementById("compareBtn").textContent = compared ? "Compared" : "Compare";
+  }
+
+  async function fetchCatalogFresh() {
+    const url = DATA_URL + (DATA_URL.includes("?") ? "&" : "?") + "cb=" + Date.now();
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("Failed to load catalog (" + res.status + ")");
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { throw new Error("Catalog returned non-JSON content."); }
+    if (Array.isArray(json)) return json;
+    if (json && Array.isArray(json.items)) return json.items;
+    throw new Error("Catalog JSON format unexpected.");
+  }
+
+  function titleTokens(title) {
+    return String(title || "")
+      .toLowerCase()
+      .split(/[^a-z0-9]+/g)
+      .filter(t => t.length >= 4)
+      .slice(0, 24);
+  }
+
+  function scoreRelated(base, cand) {
+    if (!cand || String(base.id) === String(cand.id)) return -1;
+    let score = 0;
+
+    const bc = new Set((base.categories || []).map(String));
+    const cc = (cand.categories || []).map(String);
+    for (const c of cc) if (bc.has(c)) score += 5;
+
+    if (base.year && cand.year && String(base.year) === String(cand.year)) score += 2;
+
+    const bt = new Set(titleTokens(base.title));
+    const ct = titleTokens(cand.title);
+    for (const t of ct) if (bt.has(t)) score += 1;
+
+    // slight boost for newer
+    score += Math.min(2, ((cand.modified || 0) / 1e12)); // tiny, mostly stable tie-break
+
+    return score;
+  }
+
+  function renderRecommendations(baseItem, all) {
+    const wrap = document.getElementById("recoWrap");
+    if (!baseItem || !Array.isArray(all) || all.length === 0) {
+      wrap.textContent = "No recommendations available.";
+      return;
+    }
+
+    const scored = all
+      .filter(x => String(x.id) !== String(baseItem.id))
+      .map(x => ({ item: x, score: scoreRelated(baseItem, x) }))
+      .filter(x => x.score > 0)
+      .sort((a,b) => b.score - a.score)
+      .slice(0, 6)
+      .map(x => x.item);
+
+    if (scored.length === 0) {
+      wrap.textContent = "No close matches yet.";
+      return;
+    }
+
+    wrap.innerHTML = scored.map(it => {
+      const thumb = it.thumbUrl || "https://via.placeholder.com/120x160?text=PDF";
+      const title = esc(it.title || "Untitled");
+      const year = it.year ? esc(it.year) : "";
+      const inList = isInReadingList(it.id);
+
+      return `
+        <div class="border border-gray-200 rounded p-2 bg-gray-50 flex gap-3">
+          <img src="${thumb}" alt="${title}" class="w-12 h-16 object-cover rounded border border-gray-200 bg-white"
+               loading="lazy" decoding="async" referrerpolicy="no-referrer"
+               onerror="this.onerror=null;this.src='https://via.placeholder.com/120x160?text=PDF';">
+          <div class="flex-1 min-w-0">
+            <div class="text-xs text-gray-500">${year}</div>
+            <a class="text-sm font-semibold text-amber-700 hover:underline block truncate" href="${reportUrl(it.id, it.title || "")}">
+              ${title}
+            </a>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <button class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50" data-action="save" data-id="${esc(it.id)}">
+                ${inList ? "Saved" : "Save"}
+              </button>
+              <a class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50" target="_blank" rel="noopener" href="${viewUrl(it.id, it.title || "")}">View</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    wrap.querySelectorAll("[data-action='save']").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        toggleReading(id);
+        btn.textContent = isInReadingList(id) ? "Saved" : "Save";
+      });
+    });
+  }
+
+  async function openInNotebookLM(fileId) {
+    const link = driveShareUrl(fileId);
+    try {
+      await navigator.clipboard.writeText(link);
+      window.open("https://notebooklm.google.com/", "_blank", "noopener");
+      showToast("Link copied. In NotebookLM: Add sources → Paste link.");
+    } catch {
+      window.open("https://notebooklm.google.com/", "_blank", "noopener");
+      showToast("Open NotebookLM, then add this report link as a source.");
+    }
+  }
+
+  (async function init() {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    const titleHint = params.get("t") || "";
+    const viewOnly = params.get("view") === "1";
+
+    if (!id) {
+      setError("Missing report id in URL.");
+      return;
+    }
+    window.__REPORT_ID__ = id;
+
+    // Always show reader immediately
+    document.getElementById("pdfFrame").src = drivePreviewUrl(id);
+    document.getElementById("viewBtn").href = viewUrl(id, titleHint);
+
+    // Title hint (instant)
+    if (titleHint) {
+      document.getElementById("rTitle").textContent = titleHint;
+      document.title = `dotdock — ${titleHint}`;
+    }
+
+    // View-only mode: reader full width
+    if (viewOnly) {
+      document.getElementById("shareWrap").classList.add("hidden");
+      document.getElementById("detailsCol").classList.add("hidden");
+      document.getElementById("readerCol").className = "lg:col-span-12";
+      document.getElementById("topRow").classList.add("hidden");
+      const aiSec = document.getElementById("aiSummarySection");
+      if (aiSec) aiSec.classList.add("hidden");
+      return;
+    }
+
+    // Copy link
+    const copyBtn = document.getElementById("copyLinkBtn");
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(window.location.href.split("#")[0]);
+        const t = copyBtn.querySelector(".shareText");
+        if (t) t.textContent = "Copied!"; else copyBtn.textContent = "Copied!";
+        setTimeout(() => {
+          const t2 = copyBtn.querySelector(".shareText");
+          if (t2) t2.textContent = "Copy link"; else copyBtn.textContent = "Copy link";
+        }, 1200);
+      } catch {
+        showToast("Copy failed — you can copy from the address bar.");
+      }
+    });
+
+    // Wire buttons (need id)
+    document.getElementById("addReadingBtn").addEventListener("click", () => {
+      toggleReading(id);
+      const btn = document.getElementById("addReadingBtn");
+      btn.textContent = isInReadingList(id) ? "Remove from reading list" : "Add to reading list";
+      showToast(isInReadingList(id) ? "Saved to reading list." : "Removed from reading list.");
+    });
+
+    document.getElementById("notebookBtn").addEventListener("click", () => openInNotebookLM(id));
+
+    document.getElementById("compareBtn").addEventListener("click", () => {
+      const ids = toggleCompare(id);
+      const btn = document.getElementById("compareBtn");
+      btn.textContent = ids.includes(String(id)) ? "Compared" : "Compare";
+
+      const hint = document.getElementById("compareHint");
+      if (ids.length === 2) {
+        hint.classList.remove("hidden");
+        hint.innerHTML = `Ready. <a class="underline font-semibold" href="compare.html?left=${encodeURIComponent(ids[0])}&right=${encodeURIComponent(ids[1])}">Open compare</a>`;
+      } else {
+        hint.classList.remove("hidden");
+        hint.textContent = "Select one more report (from catalog or another report page).";
+      }
+    });
+
+    // Workspace handlers
+    const wsStatus = document.getElementById("wsStatus");
+    const wsTags = document.getElementById("wsTags");
+    const wsNotes = document.getElementById("wsNotes");
+    const pinBtn = document.getElementById("pinBtn");
+    const exportBtn = document.getElementById("exportWsBtn");
+
+    function saveWorkspace() {
+      const tags = wsTags.value.split(",").map(s => s.trim()).filter(Boolean);
+      wsSetItem(id, {
+        status: wsStatus.value,
+        tags,
+        notes: wsNotes.value
+      });
+    }
+
+    wsStatus.addEventListener("change", () => { saveWorkspace(); showToast("Workspace saved."); });
+    wsTags.addEventListener("input", () => { saveWorkspace(); });
+    wsNotes.addEventListener("input", () => { saveWorkspace(); });
+
+    pinBtn.addEventListener("click", () => {
+      const cur = wsItem(id);
+      const pinned = !!cur.pinned;
+      wsSetItem(id, { pinned: !pinned });
+      pinBtn.textContent = !pinned ? "Unpin" : "Pin";
+      showToast(!pinned ? "Pinned (shows at top of catalog)." : "Unpinned.");
+    });
+
+    exportBtn.addEventListener("click", exportWorkspace);
+
+    // Render from cache fast
+    const cached = cacheGet();
+    let renderedFromCache = false;
+    let baseItem = null;
+    if (cached) {
+      const cachedItem = cached.find(x => String(x.id) === String(id));
+      if (cachedItem) {
+        baseItem = cachedItem;
+        renderItem(cachedItem);
+        renderedFromCache = true;
+        document.getElementById("statusLine").textContent = "Loaded from cache… updating";
+        renderRecommendations(cachedItem, cached);
+      }
+    }
+
+    // Load fresh
+    try {
+      const data = await fetchCatalogFresh();
+      const item = data.find(x => String(x.id) === String(id));
+      if (!item) {
+        document.getElementById("statusLine").textContent = "Not in catalog yet — showing reader only.";
+        document.getElementById("recoWrap").textContent = "No recommendations available.";
+        return;
+      }
+      baseItem = item;
+      renderItem(item);
+      document.getElementById("statusLine").textContent = "Updated";
+      renderRecommendations(item, data);
+    } catch (e) {
+      console.warn("Catalog fetch failed:", e);
+      document.getElementById("statusLine").textContent = renderedFromCache
+        ? "Loaded from cache (update unavailable)."
+        : "Catalog unavailable — showing reader only.";
+      if (!renderedFromCache) document.getElementById("recoWrap").textContent = "Recommendations unavailable.";
+    }
+  
+    // Comments
+    loadCommentsOnReport_(id);
+})();
+
+  // -------- Comments (global, via Apps Script) --------
+  function commentsBase_() {
+    return DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
+  }
+
+  async function commentsGet_(reportId, limit=50, offset=0) {
+    const url = commentsBase_() +
+      "action=comments_get&id=" + encodeURIComponent(String(reportId)) +
+      "&limit=" + encodeURIComponent(String(limit)) +
+      "&offset=" + encodeURIComponent(String(offset)) +
+      "&cb=" + Date.now();
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("comments_get failed: " + res.status);
+    const data = await res.json();
+    if (!data || data.ok !== true) throw new Error(data?.error || "comments_get invalid payload");
+    return data;
+  }
+
+  async function commentAdd_(reportId, text) {
+    const url = commentsBase_() +
+      "action=comment_add&id=" + encodeURIComponent(String(reportId)) +
+      "&device=" + encodeURIComponent(getDeviceId_()) +
+      "&name=" + encodeURIComponent(getUserName_(true) || "Anonymous") +
+      "&text=" + encodeURIComponent(text || "") +
+      "&cb=" + Date.now();
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("comment_add failed: " + res.status);
+    const data = await res.json();
+    if (!data || data.ok !== true) throw new Error(data?.error || "comment_add invalid payload");
+    return data;
+  }
+
+  function renderComments_(items) {
+    const list = document.getElementById("commentsList");
+    list.innerHTML = "";
+    (items || []).forEach((c, i) => {
+      const who = escapeHtml(c.name || "Anonymous");
+      const text = escapeHtml(c.text || "");
+      const when = c.createdAt ? new Date(c.createdAt).toLocaleString() : "";
+      const div = document.createElement("div");
+      div.className = "bg-gray-50 border border-gray-100 rounded-lg p-3";
+      div.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="font-semibold text-gray-800">${who}</div>
+          <div class="text-[11px] text-gray-400">${escapeHtml(when)}</div>
+        </div>
+        <div class="mt-1 text-gray-800 whitespace-pre-wrap">${text}</div>
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  async function loadCommentsOnReport_(reportId) {
+    const status = document.getElementById("commentsStatus");
+    const countEl = document.getElementById("commentCount");
+    status.textContent = "Loading…";
+    try {
+      const data = await commentsGet_(reportId, 50, 0);
+      const items = Array.isArray(data.items) ? data.items : [];
+      countEl.textContent = String(Number(data.total || items.length || 0) || 0);
+      if (items.length === 0) {
+        status.textContent = "No comments yet.";
+        renderComments_([]);
+        return;
+      }
+      status.textContent = "";
+      renderComments_(items);
+    } catch (e) {
+      status.textContent = "Comments unavailable: " + (e && e.message ? e.message : e);
+    }
+  }
+
+  // Hook post button
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("commentPostBtn");
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      const reportId = (window.__REPORT_ID__ || "");
+      const ta = document.getElementById("commentText");
+      const text = (ta && ta.value ? ta.value.trim() : "");
+      if (!reportId) return;
+      if (!text) return;
+      btn.disabled = true;
+      try {
+        await commentAdd_(reportId, text);
+        ta.value = "";
+        await loadCommentsOnReport_(reportId);
+      } catch (e) {
+        document.getElementById("commentsStatus").textContent = "Comments unavailable.";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+</script>
+
+</body>
+</html>

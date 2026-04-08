@@ -748,9 +748,9 @@
 
     FIREBASE_CONFIG = {
       ...FIREBASE_CONFIG_BASE,
+      ...FIREBASE_CONFIG,
       ...localCfg,
-      ...globalCfg,
-      ...FIREBASE_CONFIG
+      ...globalCfg
     };
 
     try {
@@ -2960,8 +2960,8 @@ function setupNewPostsBtn_() {
     if (!firebaseEnabled) {
       state.authUser = null;
       setAuthUiState_(null);
-      if (authOpenModalBtn) authOpenModalBtn.disabled = true;
-      if (authOpenModalBtn) authOpenModalBtn.title = "Set FIREBASE_CONFIG values to enable auth.";
+      if (authOpenModalBtn) authOpenModalBtn.title = "Set Firebase config values to enable sign-in.";
+      if (authErrorText) authErrorText.textContent = "Sign-in is not configured yet. Add Firebase config first.";
     } else {
       fbAuth.onAuthStateChanged(async (user) => {
         state.authUser = user || null;
@@ -2976,7 +2976,11 @@ function setupNewPostsBtn_() {
 
     if (authGoogleBtn) {
       authGoogleBtn.addEventListener("click", async () => {
-        if (!fbAuth) return;
+        if (!fbAuth) {
+          if (authErrorText) authErrorText.textContent = "Firebase Auth is not configured yet.";
+          showToast("Set Firebase config to enable sign-in.");
+          return;
+        }
         try {
           await fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
           closeAuthModal_();
@@ -2996,7 +3000,11 @@ function setupNewPostsBtn_() {
     if (authEmailForm) {
       authEmailForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        if (!fbAuth) return;
+        if (!fbAuth) {
+          if (authErrorText) authErrorText.textContent = "Firebase Auth is not configured yet.";
+          showToast("Set Firebase config to enable sign-in.");
+          return;
+        }
         const email = String(authEmailInput?.value || "").trim();
         const password = String(authPasswordInput?.value || "");
         if (!email || !password) {
@@ -3018,7 +3026,11 @@ function setupNewPostsBtn_() {
 
     if (authEmailSignupBtn) {
       authEmailSignupBtn.addEventListener("click", async () => {
-        if (!fbAuth) return;
+        if (!fbAuth) {
+          if (authErrorText) authErrorText.textContent = "Firebase Auth is not configured yet.";
+          showToast("Set Firebase config to enable sign-in.");
+          return;
+        }
         const email = String(authEmailInput?.value || "").trim();
         const password = String(authPasswordInput?.value || "");
         if (!email || !password) {

@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="firebase-config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <style>
     body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; }
     .brand-title { font-family: 'Playfair Display', serif; letter-spacing: 0.03em; }
@@ -52,6 +55,31 @@
   <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm px-4 py-2 rounded shadow-lg"></div>
 
 <script>
+  function firebaseCfg_() {
+    const cfg = (window.DOTDOCK_FIREBASE_CONFIG && typeof window.DOTDOCK_FIREBASE_CONFIG === "object")
+      ? window.DOTDOCK_FIREBASE_CONFIG
+      : {};
+    return cfg;
+  }
+
+  async function guardRouteAuth_() {
+    const cfg = firebaseCfg_();
+    const ready = !!(window.firebase && cfg.apiKey && cfg.projectId && cfg.appId);
+    if (!ready) {
+      document.body.innerHTML = "<div class='p-6 text-red-700'>Sign-in required, but Firebase is not configured.</div>";
+      return false;
+    }
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    return await new Promise((resolve) => {
+      firebase.auth().onAuthStateChanged((user) => {
+        if (user) return resolve(true);
+        const next = encodeURIComponent(location.pathname.replace(/^\//, "") + location.search + location.hash);
+        location.href = `index.html?auth=1&next=${next}`;
+        resolve(false);
+      });
+    });
+  }
+
   function qs(name){ return new URLSearchParams(location.search).get(name) || ""; }
   function drivePreviewUrl(fileId){ return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`; }
   function driveShareUrl(fileId){ return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view?usp=sharing`; }
@@ -67,23 +95,25 @@
     showToast._to = setTimeout(() => t.classList.add("hidden"), 2200);
   }
 
-  const id = qs("id");
-  const titleHint = qs("t");
-  const frame = document.getElementById("frame");
-  const openReport = document.getElementById("openReport");
-  const copyBtn = document.getElementById("copyLink");
-  const notebookBtn = document.getElementById("notebookBtn");
+  async function initView_() {
+    const id = qs("id");
+    const titleHint = qs("t");
+    const frame = document.getElementById("frame");
+    const openReport = document.getElementById("openReport");
+    const copyBtn = document.getElementById("copyLink");
+    const notebookBtn = document.getElementById("notebookBtn");
 
-  if (!id) {
-    document.body.innerHTML = "<div class='p-6 text-red-700'>Missing id</div>";
-  } else {
+    if (!id) {
+      document.body.innerHTML = "<div class='p-6 text-red-700'>Missing id</div>";
+      return;
+    }
+
     frame.src = drivePreviewUrl(id);
     openReport.href = reportUrl(id, titleHint);
 
     if (titleHint) document.title = `dotdock — ${titleHint}`;
-  }
 
-  copyBtn.addEventListener("click", async () => {
+    copyBtn.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(location.href.split("#")[0]);
       copyBtn.textContent = "Copied!";
@@ -93,7 +123,7 @@
     }
   });
 
-  notebookBtn.addEventListener("click", async () => {
+    notebookBtn.addEventListener("click", async () => {
     const link = driveShareUrl(id);
     try {
       await navigator.clipboard.writeText(link);
@@ -104,6 +134,9 @@
       showToast("Open NotebookLM and add this report link as a source.");
     }
   });
+  }
+
+  guardRouteAuth_().then((ok) => { if (ok) initView_(); });
 </script>
 </body>
 </html>

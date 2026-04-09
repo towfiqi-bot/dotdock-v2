@@ -2983,6 +2983,10 @@ function setupNewPostsBtn_() {
     if (authOpenModalBtn) authOpenModalBtn.addEventListener("click", openAuthModal_);
     if (authModalBackdrop) authModalBackdrop.addEventListener("click", closeAuthModal_);
     if (authModalClose) authModalClose.addEventListener("click", closeAuthModal_);
+    {
+      const p = new URLSearchParams(location.search);
+      if (p.get("auth") === "1") openAuthModal_();
+    }
 
     hydrateFirebaseConfig_();
     const firebaseEnabled = initFirebase_();
@@ -2997,6 +3001,14 @@ function setupNewPostsBtn_() {
         state.authUser = user || null;
         setAuthUiState_(user || null);
         render();
+        if (user) {
+          const p = new URLSearchParams(location.search);
+          const next = p.get("next");
+          if (next) {
+            location.href = decodeURIComponent(next);
+            return;
+          }
+        }
         if (user) {
           try { await bootstrapUserDoc_(user); }
           catch (e) { console.warn("User bootstrap failed:", e); }

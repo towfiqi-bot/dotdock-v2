@@ -9,6 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="firebase-config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
   <style>
     body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; }
@@ -131,6 +134,31 @@
   <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm px-4 py-2 rounded shadow-lg"></div>
 
 <script>
+  function firebaseCfg_() {
+    const cfg = (window.DOTDOCK_FIREBASE_CONFIG && typeof window.DOTDOCK_FIREBASE_CONFIG === "object")
+      ? window.DOTDOCK_FIREBASE_CONFIG
+      : {};
+    return cfg;
+  }
+
+  async function guardRouteAuth_() {
+    const cfg = firebaseCfg_();
+    const ready = !!(window.firebase && cfg.apiKey && cfg.projectId && cfg.appId);
+    if (!ready) {
+      document.body.innerHTML = "<div class='p-6 text-red-700'>Sign-in required, but Firebase is not configured.</div>";
+      return false;
+    }
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    return await new Promise((resolve) => {
+      firebase.auth().onAuthStateChanged((user) => {
+        if (user) return resolve(true);
+        const next = encodeURIComponent(location.pathname + location.search + location.hash);
+        location.href = `index.html?auth=1&next=${next}`;
+        resolve(false);
+      });
+    });
+  }
+
   function qs(name){ return new URLSearchParams(location.search).get(name) || ""; }
 
   // Embed mode: when used inside the catalog overlay, maximize PDF space
@@ -154,12 +182,14 @@
     return (x < y) ? [x,y] : [y,x];
   }
 
-  const leftId = qs("left");
-  const rightId = qs("right");
+  async function initCompare_() {
+    const leftId = qs("left");
+    const rightId = qs("right");
 
-  if (!leftId || !rightId) {
-    document.getElementById("missing").classList.remove("hidden");
-  } else {
+    if (!leftId || !rightId) {
+      document.getElementById("missing").classList.remove("hidden");
+      return;
+    } else {
     document.getElementById("leftFrame").src = drivePreviewUrl(leftId);
     document.getElementById("rightFrame").src = drivePreviewUrl(rightId);
 
@@ -220,7 +250,10 @@
 
     tabLeft.addEventListener("click", showLeft);
     tabRight.addEventListener("click", showRight);
+    }
   }
+
+  guardRouteAuth_().then((ok) => { if (ok) initCompare_(); });
 </script>
 </body>
 </html>

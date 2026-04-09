@@ -73,7 +73,7 @@
     return await new Promise((resolve) => {
       firebase.auth().onAuthStateChanged((user) => {
         if (user) return resolve(true);
-        const next = encodeURIComponent(location.pathname.replace(/^\//, "") + location.search + location.hash);
+        const next = encodeURIComponent(location.pathname + location.search + location.hash);
         location.href = `index.html?auth=1&next=${next}`;
         resolve(false);
       });

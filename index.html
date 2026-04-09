@@ -3005,7 +3005,8 @@ function setupNewPostsBtn_() {
           const p = new URLSearchParams(location.search);
           const next = p.get("next");
           if (next) {
-            location.href = decodeURIComponent(next);
+            const decoded = decodeURIComponent(next);
+            location.href = decoded.startsWith("/") ? decoded : ("/" + decoded);
             return;
           }
         }

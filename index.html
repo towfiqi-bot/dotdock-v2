@@ -597,6 +597,8 @@
   </div>
 
 
+  <!-- Optional project-local config (keep this file in your repo/deploy to avoid re-editing index.html) -->
+  <script src="firebase-config.js"></script>
   <!-- Firebase (script-tag / compat build for static HTML) -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -851,6 +853,15 @@
     if (code.includes("email-already-in-use")) return "This email is already in use. Try signing in instead.";
     if (code.includes("weak-password")) return "Password is too weak (minimum 6 characters).";
     return "Authentication failed. Please try again.";
+  }
+
+  function dedupeAuthUi_() {
+    const dedupeIds = ["authHeaderBox", "authStatusText", "authOpenModalBtn", "authLogoutBtn"];
+    for (const id of dedupeIds) {
+      const nodes = Array.from(document.querySelectorAll(`#${id}`));
+      if (nodes.length <= 1) continue;
+      nodes.slice(1).forEach((n) => n.remove());
+    }
   }
   // ===== Firebase end =====
 
@@ -2143,7 +2154,7 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
     const likes = likeCount(item.id);
     const likeTitle = ENABLE_REMOTE_LIKES ? "Like" : "Like (saved in your browser)";
     const isNew = !!(state.newIds && state.newIds.has(String(item.id)));
-    const authLocked = !!state.authEnabled && !state.authUser;
+    const authLocked = !state.authUser;
 
     return `
       <article data-card-id="${escapeHtml(item.id)}" data-new="${isNew ? "1" : "0"}" class="relative overflow-hidden bg-white border ${isNew ? "border-red-200 ring-2 ring-red-100" : "border-gray-200"} rounded-lg p-4 shadow-sm hover:shadow transition">
@@ -2939,6 +2950,7 @@ function setupNewPostsBtn_() {
   // --------- DOM events ----------
   document.addEventListener("DOMContentLoaded", async () => {
     // ===== Firebase start =====
+    dedupeAuthUi_();
     const authOpenModalBtn = document.getElementById("authOpenModalBtn");
     const authGoogleBtn = document.getElementById("authGoogleBtn");
     const authLogoutBtn = document.getElementById("authLogoutBtn");
@@ -4002,7 +4014,7 @@ document.addEventListener("visibilitychange", () => {
       const action = btn.getAttribute("data-action");
       const id = btn.getAttribute("data-id");
       if (!id) return;
-      const authLocked = !!state.authEnabled && !state.authUser;
+      const authLocked = !state.authUser;
 
       if (action === "auth_open") {
         openAuthModal_();

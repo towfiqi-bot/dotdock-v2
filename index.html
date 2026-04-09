@@ -588,6 +588,13 @@
                 Create account
               </button>
             </div>
+            <button id="authForgotPasswordBtn" type="button"
+                    class="text-xs text-amber-700 hover:underline">
+              Forgot password?
+            </button>
+            <div id="authPasswordPolicyNote" class="text-[11px] text-gray-500 leading-relaxed">
+              Password policy: minimum 6 characters, including at least 1 uppercase letter and 1 special character.
+            </div>
           </form>
 
           <div id="authErrorText" class="mt-3 text-xs text-rose-700"></div>
@@ -708,6 +715,7 @@
     trendsCacheConcentration: "—",
     liveUpdatesTimer: null,
     autoFillGuard: false,
+    catalogLoading: true,
     authEnabled: false,
     authUser: null
   };
@@ -848,6 +856,8 @@
     if (code.includes("unauthorized-domain")) return "This domain is not authorized in Firebase Auth settings.";
     if (code.includes("operation-not-allowed")) return "Provider not enabled in Firebase Authentication settings.";
     if (code.includes("invalid-credential")) return "Invalid credentials. Please check email/password.";
+    if (code.includes("invalid-email")) return "Please enter a valid email address.";
+    if (code.includes("missing-email")) return "Email is required.";
     if (code.includes("wrong-password")) return "Incorrect password.";
     if (code.includes("user-not-found")) return "No account found for this email.";
     if (code.includes("email-already-in-use")) return "This email is already in use. Try signing in instead.";
@@ -1959,7 +1969,7 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
       const ago = formatAgoWords(ts);
       const url = reportPageUrl(item.id, item.title || "");
       return `
-        <a href="${url}" class="group block rounded-md px-1 py-1 hover:bg-rose-50 transition">
+        <a href="${url}" data-live-open="1" data-id="${escapeHtml(item.id)}" class="group block rounded-md px-1 py-1 hover:bg-rose-50 transition">
           <div class="flex items-start gap-2">
             <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full border border-rose-500 bg-white"></span>
             <div class="min-w-0">
@@ -2316,6 +2326,13 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
   function render() {
     const container = document.getElementById("cardsContainer");
     const info = document.getElementById("resultsInfo");
+    if (!container || !info) return;
+
+    if (state.catalogLoading) {
+      renderCardSkeletons(state.pageSize);
+      info.textContent = "Loading publications…";
+      return;
+    }
 
     const total = state.filteredItems.length;
     const maxShown = state.page * state.pageSize;
@@ -2958,6 +2975,7 @@ function setupNewPostsBtn_() {
     const authEmailInput = document.getElementById("authEmailInput");
     const authPasswordInput = document.getElementById("authPasswordInput");
     const authEmailSignupBtn = document.getElementById("authEmailSignupBtn");
+    const authForgotPasswordBtn = document.getElementById("authForgotPasswordBtn");
     const authModalBackdrop = document.getElementById("authModalBackdrop");
     const authModalClose = document.getElementById("authModalClose");
     const authErrorText = document.getElementById("authErrorText");
@@ -3054,6 +3072,30 @@ function setupNewPostsBtn_() {
           if (authErrorText) authErrorText.textContent = "";
           closeAuthModal_();
           showToast("Account created.");
+        } catch (e) {
+          const msg = authFriendlyError_(e);
+          if (authErrorText) authErrorText.textContent = msg;
+          showToast(msg);
+        }
+      });
+    }
+
+    if (authForgotPasswordBtn) {
+      authForgotPasswordBtn.addEventListener("click", async () => {
+        if (!fbAuth) {
+          if (authErrorText) authErrorText.textContent = "Firebase Auth is not configured yet.";
+          showToast("Set Firebase config to enable password reset.");
+          return;
+        }
+        const email = String(authEmailInput?.value || "").trim();
+        if (!email) {
+          if (authErrorText) authErrorText.textContent = "Enter your email first, then click Forgot password.";
+          return;
+        }
+        try {
+          await fbAuth.sendPasswordResetEmail(email);
+          if (authErrorText) authErrorText.textContent = "";
+          showToast("Password reset email sent.");
         } catch (e) {
           const msg = authFriendlyError_(e);
           if (authErrorText) authErrorText.textContent = msg;
@@ -3220,6 +3262,7 @@ function setupNewPostsBtn_() {
     const sortSelect = document.getElementById("sortSelect");
     const newsletterBtn = document.getElementById("newsletterBtn");
     const trendsList = document.getElementById("trendsList");
+    const liveUpdatesListEl = document.getElementById("liveUpdatesList");
     const trendsRangeToday = document.getElementById("trendsRangeToday");
     const trendsRange7d = document.getElementById("trendsRange7d");
     const navHome = document.getElementById("navHome");
@@ -3252,6 +3295,16 @@ function setupNewPostsBtn_() {
         state.searchQuery = topic;
         searchInput.value = topic;
         doSearch({ remember: true, closeSuggest: true });
+      });
+    }
+    if (liveUpdatesListEl) {
+      liveUpdatesListEl.addEventListener("click", (e) => {
+        const link = e.target.closest("[data-live-open='1']");
+        if (!link) return;
+        if (state.authUser) return;
+        e.preventDefault();
+        openAuthModal_();
+        showToast("Please sign in to open report details.");
       });
     }
     if (trendsRangeToday) trendsRangeToday.addEventListener("click", () => {
@@ -4144,6 +4197,7 @@ document.addEventListener("visibilitychange", () => {
     const cached = allowCachedFirst ? cacheGet() : null;
     if (cached) {
       state.allItems = prepareItems(cached);
+      state.catalogLoading = false;
       buildFacetFilters();
       refreshSearchSuggestData();
 
@@ -4169,6 +4223,7 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
           : "Showing cached snapshot while syncing latest…";
     } else {
       // Keep header pill visible while first load runs
+      state.catalogLoading = true;
       setLiveHeaderStatus({ updatedAt: 0, newCount: 0 });
       renderCardSkeletons(state.pageSize);
       document.getElementById("resultsInfo").textContent = "Loading publications…";
@@ -4181,6 +4236,7 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
     try {
       const data = prepareItems(await loadData(false));
       state.allItems = data;
+      state.catalogLoading = false;
       cacheSet(data);
       buildFacetFilters();
       refreshSearchSuggestData();
@@ -4207,6 +4263,7 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
           try {
             const retry = prepareItems(await loadData(true));
             state.allItems = retry;
+            state.catalogLoading = false;
             cacheSet(retry);
             buildFacetFilters();
             refreshSearchSuggestData();
@@ -4221,6 +4278,7 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
             infoEl.textContent = "Still loading from server… please wait.";
           }
         } else {
+          state.catalogLoading = false;
           infoEl.textContent = "Error loading data: " + e.message;
         }
       }

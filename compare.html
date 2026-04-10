@@ -77,8 +77,6 @@
         <div class="md:ml-auto flex flex-wrap items-center gap-2">
           <a href="index.html" class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">← Back to catalog</a>
           <button id="swapBtn" class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">Swap</button>
-          <a id="openLeftReport" class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50" href="#" target="_blank" rel="noopener">Left report</a>
-          <a id="openRightReport" class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50" href="#" target="_blank" rel="noopener">Right report</a>
         </div>
       </div>
     </div>
@@ -148,6 +146,11 @@
     return cfg;
   }
 
+  // ===== Auth-specific route guard =====
+  function authEntryUrl_() {
+    return new URL("index.html", location.href);
+  }
+
   async function guardRouteAuth_() {
     const cfg = firebaseCfg_();
     const ready = !!(window.firebase && cfg.apiKey && cfg.projectId && cfg.appId);
@@ -160,7 +163,10 @@
       firebase.auth().onAuthStateChanged((user) => {
         if (user) return resolve(true);
         const next = encodeURIComponent(location.pathname + location.search + location.hash);
-        location.href = `index.html?auth=1&next=${next}`;
+        const entry = authEntryUrl_();
+        entry.searchParams.set("auth", "1");
+        entry.searchParams.set("next", next);
+        location.href = entry.toString();
         resolve(false);
       });
     });
@@ -173,7 +179,6 @@
     document.body.classList.add("embed");
   }
   function drivePreviewUrl(fileId){ return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`; }
-  function reportUrl(fileId){ return `report.html?id=${encodeURIComponent(fileId)}`; }
 
   function showToast(msg){
     const t = document.getElementById("toast");
@@ -199,8 +204,6 @@
     document.getElementById("leftFrame").src = drivePreviewUrl(leftId);
     document.getElementById("rightFrame").src = drivePreviewUrl(rightId);
 
-    document.getElementById("openLeftReport").href = reportUrl(leftId);
-    document.getElementById("openRightReport").href = reportUrl(rightId);
 
     // Titles show IDs (since compare page doesn't load catalog). You can improve later by passing lt/rt in query params.
     document.getElementById("leftTitle").textContent = "Left: " + leftId;

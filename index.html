@@ -124,11 +124,6 @@
                   </span>
                 </div>
 
-                <div id="authHeaderBox" class="w-full flex flex-wrap items-center justify-end gap-2 text-[11px] text-gray-600">
-                  <span id="authStatusText" class="px-2 py-1 rounded-full border border-gray-200 bg-white">Signed out</span>
-                  <button id="authOpenModalBtn" type="button" class="px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Sign in</button>
-                  <button id="authLogoutBtn" type="button" class="hidden px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Logout</button>
-                </div>
               </div>
             </div>
           </div>
@@ -407,8 +402,7 @@
           <p id="resultsInfo" class="text-sm text-gray-600">Loading publications…</p>
           <div class="flex items-center gap-2">
             <button id="loadMoreTopBtn" type="button" class="hidden md:inline-flex px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">Load more</button>
-            <button id="pinBoostToggleBtn" type="button" class="px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">Pinned first: Off</button>
-            <label for="sortSelect" class="text-xs text-gray-500 hidden sm:block">Sort</label>
+                        <label for="sortSelect" class="text-xs text-gray-500 hidden sm:block">Sort</label>
             <select id="sortSelect" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white">
               <option value="newest">Sort (Default - Newest)</option>
               <option value="updated_newest">Recently Updated</option>
@@ -647,7 +641,6 @@
   const WORKSPACE_KEY = "dotdock_workspace_v1";
   const COMPARE_KEY = "dotdock_compare_v1";
   const LIKE_KEY = "dotdock_likes_v1";
-  const PIN_BOOST_KEY = "dotdock_pin_boost_enabled_v1";
 
   // ===== Firebase start =====
   // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
@@ -663,47 +656,8 @@
   let fbDb = null;
   // ===== Firebase end =====
 
-  // ===== Firebase start =====
-  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
-  const FIREBASE_CONFIG_BASE = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    appId: ""
-  };
-  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
-  let fbApp = null;
-  let fbAuth = null;
-  let fbDb = null;
-  // ===== Firebase end =====
 
-  // ===== Firebase start =====
-  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
-  const FIREBASE_CONFIG_BASE = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    appId: ""
-  };
-  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
-  let fbApp = null;
-  let fbAuth = null;
-  let fbDb = null;
-  // ===== Firebase end =====
 
-  // ===== Firebase start =====
-  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
-  const FIREBASE_CONFIG_BASE = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    appId: ""
-  };
-  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
-  let fbApp = null;
-  let fbAuth = null;
-  let fbDb = null;
-  // ===== Firebase end =====
 
   // Set these later
   const NEWSLETTER_URL = "";
@@ -798,6 +752,13 @@
     const info = document.getElementById("resultsInfo");
     if (!info) return;
     const msg = ev?.message ? String(ev.message) : "Unexpected script error";
+    info.textContent = "Load error: " + msg;
+  });
+  window.addEventListener("unhandledrejection", (ev) => {
+    const info = document.getElementById("resultsInfo");
+    if (!info) return;
+    const reason = ev?.reason;
+    const msg = (reason && reason.message) ? String(reason.message) : String(reason || "Unhandled promise rejection");
     info.textContent = "Load error: " + msg;
   });
 
@@ -3059,6 +3020,28 @@ function setupNewPostsBtn_() {
 
 
   
+  /**
+   * ===== Auth helpers =====
+   * Keep auth/redirect logic isolated and project-path safe (GitHub Pages).
+   */
+  function safeReturnFromAuth_() {
+    const p = new URLSearchParams(location.search);
+    const next = p.get("next");
+    if (!next) return false;
+
+    let decoded = "";
+    try { decoded = decodeURIComponent(next); } catch (e) { decoded = String(next); }
+    if (!decoded) return false;
+
+    const baseDir = location.pathname.replace(/[^/]*$/, "");
+    const target = new URL(decoded, location.origin + baseDir);
+    if (target.origin !== location.origin) return false;
+
+    location.href = target.toString();
+    return true;
+  }
+
+
   // --------- DOM events ----------
   document.addEventListener("DOMContentLoaded", async () => {
     // ===== Firebase start =====
@@ -3096,15 +3079,7 @@ function setupNewPostsBtn_() {
         state.authUser = user || null;
         setAuthUiState_(user || null);
         render();
-        if (user) {
-          const p = new URLSearchParams(location.search);
-          const next = p.get("next");
-          if (next) {
-            const decoded = decodeURIComponent(next);
-            location.href = decoded.startsWith("/") ? decoded : ("/" + decoded);
-            return;
-          }
-        }
+        if (user && safeReturnFromAuth_()) return;
         if (user) {
           try { await bootstrapUserDoc_(user); }
           catch (e) { console.warn("User bootstrap failed:", e); }
@@ -3369,7 +3344,6 @@ function setupNewPostsBtn_() {
     const clearPinnedBasketBtn = document.getElementById("clearPinnedBasketBtn");
     const clearCompareBtn = document.getElementById("clearCompareBtn");
     const sortSelect = document.getElementById("sortSelect");
-    const pinBoostToggleBtn = document.getElementById("pinBoostToggleBtn");
     const newsletterBtn = document.getElementById("newsletterBtn");
     const trendsList = document.getElementById("trendsList");
     const liveUpdatesListEl = document.getElementById("liveUpdatesList");
@@ -3380,12 +3354,6 @@ function setupNewPostsBtn_() {
 
     setTabFromUrl();
 
-    try { state.pinBoostEnabled = (localStorage.getItem(PIN_BOOST_KEY) === "1"); } catch (e) {}
-    function renderPinBoostBtn_() {
-      if (!pinBoostToggleBtn) return;
-      pinBoostToggleBtn.textContent = `Pinned first: ${state.pinBoostEnabled ? "On" : "Off"}`;
-    }
-    renderPinBoostBtn_();
 
     function switchTab_(tab) {
       state.tab = (tab === "today") ? "today" : "home";

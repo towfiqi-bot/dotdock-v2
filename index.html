@@ -652,20 +652,6 @@
   let fbDb = null;
   // ===== Firebase end =====
 
-  // ===== Firebase start =====
-  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
-  const FIREBASE_CONFIG_BASE = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    appId: ""
-  };
-  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
-  let fbApp = null;
-  let fbAuth = null;
-  let fbDb = null;
-  // ===== Firebase end =====
-
   // Set these later
   const NEWSLETTER_URL = "";
   const SUBMIT_FORM_URL = "";  // optional: link to a Google Form / Typeform
@@ -3475,12 +3461,12 @@ document.addEventListener("visibilitychange", () => {
       setToggleState(toggleYears, document.getElementById("yearFilters"), true);
     }
 
-    sortSelect.addEventListener("change", () => {
+    if (sortSelect) sortSelect.addEventListener("change", () => {
       state.sortMode = sortSelect.value || "newest";
       applyFilters(true);
     });
 
-    newsletterBtn.addEventListener("click", () => {
+    if (newsletterBtn) newsletterBtn.addEventListener("click", () => {
       if (!NEWSLETTER_URL) {
         showToast("Newsletter link not set yet.");
         return;
@@ -3858,15 +3844,15 @@ document.addEventListener("visibilitychange", () => {
       render();
     });
 
-    wsStatusFilter.addEventListener("change", () => {
+    if (wsStatusFilter) wsStatusFilter.addEventListener("change", () => {
       state.wsStatusFilter = wsStatusFilter.value;
       applyFilters();
     });
-    wsTagFilter.addEventListener("input", () => {
+    if (wsTagFilter) wsTagFilter.addEventListener("input", () => {
       state.wsTagFilter = wsTagFilter.value;
       applyFilters();
     });
-    exportWsBtn.addEventListener("click", exportWorkspace);
+    if (exportWsBtn) exportWsBtn.addEventListener("click", exportWorkspace);
     if (clearPinsBtn) clearPinsBtn.addEventListener("click", () => {
       const ws = workspaceGet();
       Object.keys(ws).forEach((id) => {
@@ -3883,7 +3869,7 @@ document.addEventListener("visibilitychange", () => {
       applyFilters(true);
     });
 
-    clearCompareBtn.addEventListener("click", () => {
+    if (clearCompareBtn) clearCompareBtn.addEventListener("click", () => {
       compareSet([]);
       renderCompare();
       render();
@@ -4355,7 +4341,7 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
       }
     }, 15000);
 
-    sortSelect.value = state.sortMode;
+    if (sortSelect) sortSelect.value = state.sortMode;
 
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {

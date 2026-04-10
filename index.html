@@ -474,11 +474,6 @@
         <div class="flex items-center gap-3 px-3 md:px-4 py-1.5 md:py-2 border-b border-gray-200">
           <div class="font-semibold text-gray-900 truncate text-sm md:text-base" id="pdfModalTitle">Report</div>
           <div class="ml-auto flex gap-2">
-            <a id="pdfModalView"
-               target="_blank" rel="noopener"
-               class="px-3 py-1.5 text-sm font-semibold bg-amber-600 text-white rounded hover:bg-amber-700">
-              View PDF (new tab)
-            </a>
             <button id="pdfModalClose"
                     class="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
               Close
@@ -929,11 +924,6 @@
 
   function reportPageUrl(fileId, title) {
     const base = `report.html?id=${encodeURIComponent(fileId)}`;
-    return title ? `${base}&t=${encodeURIComponent(title)}` : base;
-  }
-
-  function viewPageUrl(fileId, title) {
-    const base = `report.html?id=${encodeURIComponent(fileId)}&view=1`;
     return title ? `${base}&t=${encodeURIComponent(title)}` : base;
   }
 
@@ -2239,10 +2229,6 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
                 </span>
               </button>
 
-              <a href="${viewPageUrl(item.id, item.title || "")}" target="_blank" rel="noopener"
-                 class="px-3 py-1.5 text-xs font-semibold bg-amber-600 text-white rounded hover:bg-amber-700">
-                View
-              </a>
             </div>
           </div>
         </div>
@@ -2393,11 +2379,9 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
     const modal = document.getElementById("pdfModal");
     const frame = document.getElementById("pdfModalFrame");
     const title = document.getElementById("pdfModalTitle");
-    const viewBtn = document.getElementById("pdfModalView");
 
     title.textContent = item.title || "Report";
     frame.src = drivePreviewUrl(item.id);
-    viewBtn.href = viewPageUrl(item.id, item.title || "");
 
     modal.classList.remove("hidden");
     document.body.style.overflow = "hidden";

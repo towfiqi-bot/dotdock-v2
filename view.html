@@ -14,6 +14,17 @@
   <style>
     body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; }
     .brand-title { font-family: 'Playfair Display', serif; letter-spacing: 0.03em; }
+    /* Temporary UI mask to block Drive pop-out hotspot in embedded preview */
+    .pdf-popout-mask {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.5rem;
+      width: 72px;
+      height: 52px;
+      background: #111827;
+      border-radius: 6px;
+      z-index: 15;
+    }
   </style>
 </head>
 <body class="bg-gray-50">
@@ -47,8 +58,9 @@
   </header>
 
   <main class="max-w-6xl mx-auto px-2 md:px-4 py-3">
-    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm" style="height: calc(100vh - 88px);">
+    <div class="relative bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm" style="height: calc(100vh - 88px);">
       <iframe id="frame" class="w-full h-full" title="PDF viewer" loading="lazy"></iframe>
+      <div class="pdf-popout-mask" aria-hidden="true" title="Preview toolbar masked"></div>
     </div>
   </main>
 

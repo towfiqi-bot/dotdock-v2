@@ -123,6 +123,12 @@
                     New: 0
                   </span>
                 </div>
+
+                <div id="authHeaderBox" class="w-full flex flex-wrap items-center justify-end gap-2 text-[11px] text-gray-600">
+                  <span id="authStatusText" class="px-2 py-1 rounded-full border border-gray-200 bg-white">Signed out</span>
+                  <button id="authOpenModalBtn" type="button" class="px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Sign in</button>
+                  <button id="authLogoutBtn" type="button" class="hidden px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Logout</button>
+                </div>
               </div>
             </div>
           </div>
@@ -631,6 +637,20 @@
   const COMPARE_KEY = "dotdock_compare_v1";
   const LIKE_KEY = "dotdock_likes_v1";
   const PIN_BOOST_KEY = "dotdock_pin_boost_enabled_v1";
+
+  // ===== Firebase start =====
+  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
+  const FIREBASE_CONFIG_BASE = {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    appId: ""
+  };
+  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
+  let fbApp = null;
+  let fbAuth = null;
+  let fbDb = null;
+  // ===== Firebase end =====
 
   // ===== Firebase start =====
   // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).

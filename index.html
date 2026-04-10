@@ -123,6 +123,12 @@
                     New: 0
                   </span>
                 </div>
+
+                <div id="authHeaderBox" class="w-full flex flex-wrap items-center justify-end gap-2 text-[11px] text-gray-600">
+                  <span id="authStatusText" class="px-2 py-1 rounded-full border border-gray-200 bg-white">Signed out</span>
+                  <button id="authOpenModalBtn" type="button" class="px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Sign in</button>
+                  <button id="authLogoutBtn" type="button" class="hidden px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Logout</button>
+                </div>
               </div>
             </div>
           </div>
@@ -401,6 +407,7 @@
           <p id="resultsInfo" class="text-sm text-gray-600">Loading publications…</p>
           <div class="flex items-center gap-2">
             <button id="loadMoreTopBtn" type="button" class="hidden md:inline-flex px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">Load more</button>
+            <button id="pinBoostToggleBtn" type="button" class="px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">Pinned first: Off</button>
             <label for="sortSelect" class="text-xs text-gray-500 hidden sm:block">Sort</label>
             <select id="sortSelect" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white">
               <option value="newest">Sort (Default - Newest)</option>
@@ -640,6 +647,49 @@
   const WORKSPACE_KEY = "dotdock_workspace_v1";
   const COMPARE_KEY = "dotdock_compare_v1";
   const LIKE_KEY = "dotdock_likes_v1";
+  const PIN_BOOST_KEY = "dotdock_pin_boost_enabled_v1";
+
+  // ===== Firebase start =====
+  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
+  const FIREBASE_CONFIG_BASE = {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    appId: ""
+  };
+  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
+  let fbApp = null;
+  let fbAuth = null;
+  let fbDb = null;
+  // ===== Firebase end =====
+
+  // ===== Firebase start =====
+  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
+  const FIREBASE_CONFIG_BASE = {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    appId: ""
+  };
+  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
+  let fbApp = null;
+  let fbAuth = null;
+  let fbDb = null;
+  // ===== Firebase end =====
+
+  // ===== Firebase start =====
+  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
+  const FIREBASE_CONFIG_BASE = {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    appId: ""
+  };
+  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
+  let fbApp = null;
+  let fbAuth = null;
+  let fbDb = null;
+  // ===== Firebase end =====
 
   // ===== Firebase start =====
   // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
@@ -3319,6 +3369,7 @@ function setupNewPostsBtn_() {
     const clearPinnedBasketBtn = document.getElementById("clearPinnedBasketBtn");
     const clearCompareBtn = document.getElementById("clearCompareBtn");
     const sortSelect = document.getElementById("sortSelect");
+    const pinBoostToggleBtn = document.getElementById("pinBoostToggleBtn");
     const newsletterBtn = document.getElementById("newsletterBtn");
     const trendsList = document.getElementById("trendsList");
     const liveUpdatesListEl = document.getElementById("liveUpdatesList");
@@ -3328,6 +3379,13 @@ function setupNewPostsBtn_() {
     const navToday = document.getElementById("navToday");
 
     setTabFromUrl();
+
+    try { state.pinBoostEnabled = (localStorage.getItem(PIN_BOOST_KEY) === "1"); } catch (e) {}
+    function renderPinBoostBtn_() {
+      if (!pinBoostToggleBtn) return;
+      pinBoostToggleBtn.textContent = `Pinned first: ${state.pinBoostEnabled ? "On" : "Off"}`;
+    }
+    renderPinBoostBtn_();
 
     function switchTab_(tab) {
       state.tab = (tab === "today") ? "today" : "home";

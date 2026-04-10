@@ -331,6 +331,10 @@
                   class="mt-3 w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
             Export my workspace
           </button>
+          <button id="clearPinsBtn"
+                  class="mt-2 w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
+            Unpin all
+          </button>
 
           <div class="text-[11px] text-gray-500 mt-2">
             Saved locally in your browser (no login).
@@ -392,6 +396,7 @@
           <p id="resultsInfo" class="text-sm text-gray-600">Loading publications…</p>
           <div class="flex items-center gap-2">
             <button id="loadMoreTopBtn" type="button" class="hidden md:inline-flex px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">Load more</button>
+            <button id="pinBoostToggleBtn" type="button" class="px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">Pinned first: Off</button>
             <label for="sortSelect" class="text-xs text-gray-500 hidden sm:block">Sort</label>
             <select id="sortSelect" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white">
               <option value="newest">Sort (Default - Newest)</option>
@@ -631,6 +636,21 @@
   const WORKSPACE_KEY = "dotdock_workspace_v1";
   const COMPARE_KEY = "dotdock_compare_v1";
   const LIKE_KEY = "dotdock_likes_v1";
+  const PIN_BOOST_KEY = "dotdock_pin_boost_enabled_v1";
+
+  // ===== Firebase start =====
+  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
+  const FIREBASE_CONFIG_BASE = {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    appId: ""
+  };
+  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
+  let fbApp = null;
+  let fbAuth = null;
+  let fbDb = null;
+  // ===== Firebase end =====
 
   // ===== Firebase start =====
   // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
@@ -711,6 +731,7 @@
     liveUpdatesTimer: null,
     autoFillGuard: false,
     catalogLoading: true,
+    pinBoostEnabled: false,
     authEnabled: false,
     authUser: null
   };
@@ -1908,9 +1929,11 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
     }
 
     state.filteredItems.sort((a,b) => {
-      const ap = wsPinned(a.id) ? 1 : 0;
-      const bp = wsPinned(b.id) ? 1 : 0;
-      if (ap !== bp) return bp - ap;
+      if (state.pinBoostEnabled) {
+        const ap = wsPinned(a.id) ? 1 : 0;
+        const bp = wsPinned(b.id) ? 1 : 0;
+        if (ap !== bp) return bp - ap;
+      }
 
       if (!overrideOn && q) {
         const as = state.scoreById.get(String(a.id)) || 0;
@@ -3255,8 +3278,10 @@ function setupNewPostsBtn_() {
     const wsStatusFilter = document.getElementById("wsStatusFilter");
     const wsTagFilter = document.getElementById("wsTagFilter");
     const exportWsBtn = document.getElementById("exportWorkspaceBtn");
+    const clearPinsBtn = document.getElementById("clearPinsBtn");
     const clearCompareBtn = document.getElementById("clearCompareBtn");
     const sortSelect = document.getElementById("sortSelect");
+    const pinBoostToggleBtn = document.getElementById("pinBoostToggleBtn");
     const newsletterBtn = document.getElementById("newsletterBtn");
     const trendsList = document.getElementById("trendsList");
     const liveUpdatesListEl = document.getElementById("liveUpdatesList");
@@ -3266,6 +3291,13 @@ function setupNewPostsBtn_() {
     const navToday = document.getElementById("navToday");
 
     setTabFromUrl();
+
+    try { state.pinBoostEnabled = (localStorage.getItem(PIN_BOOST_KEY) === "1"); } catch (e) {}
+    function renderPinBoostBtn_() {
+      if (!pinBoostToggleBtn) return;
+      pinBoostToggleBtn.textContent = `Pinned first: ${state.pinBoostEnabled ? "On" : "Off"}`;
+    }
+    renderPinBoostBtn_();
 
     function switchTab_(tab) {
       state.tab = (tab === "today") ? "today" : "home";
@@ -3835,6 +3867,21 @@ document.addEventListener("visibilitychange", () => {
       applyFilters();
     });
     exportWsBtn.addEventListener("click", exportWorkspace);
+    if (clearPinsBtn) clearPinsBtn.addEventListener("click", () => {
+      const ws = workspaceGet();
+      Object.keys(ws).forEach((id) => {
+        if (ws[id] && ws[id].pinned) ws[id].pinned = false;
+      });
+      workspaceSet(ws);
+      showToast("All pins cleared.");
+      applyFilters(true);
+    });
+    if (pinBoostToggleBtn) pinBoostToggleBtn.addEventListener("click", () => {
+      state.pinBoostEnabled = !state.pinBoostEnabled;
+      try { localStorage.setItem(PIN_BOOST_KEY, state.pinBoostEnabled ? "1" : "0"); } catch (e) {}
+      renderPinBoostBtn_();
+      applyFilters(true);
+    });
 
     clearCompareBtn.addEventListener("click", () => {
       compareSet([]);
@@ -4086,6 +4133,11 @@ document.addEventListener("visibilitychange", () => {
         wsSetItem(id, { pinned: !pinned });
         renderCompare();
         applyFilters();
+        if (!state.pinBoostEnabled) {
+          showToast(!pinned ? "Pinned. Turn on 'Pinned first' to keep it at top." : "Unpinned.");
+        } else {
+          showToast(!pinned ? "Pinned at top." : "Unpinned.");
+        }
       }
 
       if (action === "notebooklm" && item) openInNotebookLM(item);

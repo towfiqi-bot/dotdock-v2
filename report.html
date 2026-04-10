@@ -217,12 +217,6 @@
                     class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm"
                     placeholder="Your notes for this report…"></textarea>
 
-          <div class="mt-3 flex gap-2">
-            <button id="pinBtn"
-                    class="px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
-              Pin
-            </button>
-          </div>
 
           <div class="text-[11px] text-gray-500 mt-2">
             Saved locally in your browser (no login).
@@ -570,7 +564,6 @@
     document.getElementById("wsStatus").value = (ws.status || "unread").toLowerCase();
     document.getElementById("wsTags").value = Array.isArray(ws.tags) ? ws.tags.join(", ") : "";
     document.getElementById("wsNotes").value = ws.notes || "";
-    document.getElementById("pinBtn").textContent = ws.pinned ? "Unpin" : "Pin";
 
     // Compare state
     const compared = compareGet().includes(String(item.id));
@@ -761,7 +754,6 @@
     const wsStatus = document.getElementById("wsStatus");
     const wsTags = document.getElementById("wsTags");
     const wsNotes = document.getElementById("wsNotes");
-    const pinBtn = document.getElementById("pinBtn");
     const exportBtn = document.getElementById("exportWsBtn");
 
     function saveWorkspace() {
@@ -776,14 +768,6 @@
     wsStatus.addEventListener("change", () => { saveWorkspace(); showToast("Workspace saved."); });
     wsTags.addEventListener("input", () => { saveWorkspace(); });
     wsNotes.addEventListener("input", () => { saveWorkspace(); });
-
-    pinBtn.addEventListener("click", () => {
-      const cur = wsItem(id);
-      const pinned = !!cur.pinned;
-      wsSetItem(id, { pinned: !pinned });
-      pinBtn.textContent = !pinned ? "Unpin" : "Pin";
-      showToast(!pinned ? "Pinned (shows at top of catalog)." : "Unpinned.");
-    });
 
     exportBtn.addEventListener("click", exportWorkspace);
 

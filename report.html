@@ -293,6 +293,11 @@
     return cfg;
   }
 
+  // ===== Auth-specific route guard =====
+  function authEntryUrl_() {
+    return new URL("index.html", location.href);
+  }
+
   async function guardRouteAuth_() {
     const cfg = firebaseCfg_();
     const ready = !!(window.firebase && cfg.apiKey && cfg.projectId && cfg.appId);
@@ -313,13 +318,16 @@
           if (signOutBtn) {
             signOutBtn.onclick = async () => {
               await firebase.auth().signOut();
-              location.href = "index.html";
+              location.href = authEntryUrl_().toString();
             };
           }
           return resolve(true);
         }
         const next = encodeURIComponent(location.pathname + location.search + location.hash);
-        location.href = `index.html?auth=1&next=${next}`;
+        const entry = authEntryUrl_();
+        entry.searchParams.set("auth", "1");
+        entry.searchParams.set("next", next);
+        location.href = entry.toString();
         resolve(false);
       });
     });

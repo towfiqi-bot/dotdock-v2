@@ -691,6 +691,20 @@
   let fbDb = null;
   // ===== Firebase end =====
 
+  // ===== Firebase start =====
+  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
+  const FIREBASE_CONFIG_BASE = {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    appId: ""
+  };
+  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
+  let fbApp = null;
+  let fbAuth = null;
+  let fbDb = null;
+  // ===== Firebase end =====
+
   // Set these later
   const NEWSLETTER_URL = "";
   const SUBMIT_FORM_URL = "";  // optional: link to a Google Form / Typeform
@@ -779,6 +793,13 @@
     clearTimeout(showToast._to);
     showToast._to = setTimeout(() => t.classList.add("hidden"), 2200);
   }
+
+  window.addEventListener("error", (ev) => {
+    const info = document.getElementById("resultsInfo");
+    if (!info) return;
+    const msg = ev?.message ? String(ev.message) : "Unexpected script error";
+    info.textContent = "Load error: " + msg;
+  });
 
   // ===== Firebase start =====
   function hydrateFirebaseConfig_() {
@@ -912,6 +933,14 @@
       if (nodes.length <= 1) continue;
       nodes.slice(1).forEach((n) => n.remove());
     }
+    const legacyRows = Array.from(document.querySelectorAll("header div.flex.flex-wrap.items-center.justify-end.gap-2.text-\\[11px\\].text-gray-600"));
+    if (legacyRows.length > 1) legacyRows.slice(1).forEach((n) => n.remove());
+    document.querySelectorAll("header span").forEach((el) => {
+      if (el.id === "authStatusText") return;
+      if (String(el.textContent || "").trim().toLowerCase() === "signed out") {
+        el.remove();
+      }
+    });
   }
   // ===== Firebase end =====
 

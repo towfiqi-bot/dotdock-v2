@@ -9,11 +9,25 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="firebase-config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
   <style>
     body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; }
     .brand-title { font-family: 'Playfair Display', serif; letter-spacing: 0.03em; }
     .brand-tagline { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; }
+    /* Temporary UI mask to block Drive pop-out hotspot in embedded preview */
+    .pdf-popout-mask {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.5rem;
+      width: 72px;
+      height: 52px;
+      background: #111827;
+      border-radius: 6px;
+      z-index: 15;
+    }
   </style>
 </head>
 
@@ -140,11 +154,6 @@
               </table>
 
               <div class="mt-3 flex flex-wrap gap-2">
-                <a id="viewBtn" target="_blank" rel="noopener"
-                   class="inline-flex items-center px-4 py-2 text-sm font-semibold bg-amber-600 text-white rounded hover:bg-amber-700">
-                  View PDF (new tab)
-                </a>
-
                 <button id="addReadingBtn"
                         class="px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
                   Add to reading list
@@ -224,12 +233,15 @@
             <a href="index.html" class="text-sm text-amber-700 hover:underline">Back to catalog</a>
           </div>
 
-          <iframe id="pdfFrame"
-                  class="w-full"
-                  style="height: 75vh;"
-                  title="PDF viewer"
-                  src=""
-                  loading="lazy"></iframe>
+          <div class="relative">
+            <iframe id="pdfFrame"
+                    class="w-full"
+                    style="height: 75vh;"
+                    title="PDF viewer"
+                    src=""
+                    loading="lazy"></iframe>
+            <div class="pdf-popout-mask" aria-hidden="true" title="Preview toolbar masked"></div>
+          </div>
         </div>
       </section>
     </div>
@@ -269,6 +281,31 @@
   <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm px-4 py-2 rounded shadow-lg"></div>
 
 <script>
+  function firebaseCfg_() {
+    const cfg = (window.DOTDOCK_FIREBASE_CONFIG && typeof window.DOTDOCK_FIREBASE_CONFIG === "object")
+      ? window.DOTDOCK_FIREBASE_CONFIG
+      : {};
+    return cfg;
+  }
+
+  async function guardRouteAuth_() {
+    const cfg = firebaseCfg_();
+    const ready = !!(window.firebase && cfg.apiKey && cfg.projectId && cfg.appId);
+    if (!ready) {
+      document.body.innerHTML = "<div class='p-6 text-red-700'>Sign-in required, but Firebase is not configured.</div>";
+      return false;
+    }
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    return await new Promise((resolve) => {
+      firebase.auth().onAuthStateChanged((user) => {
+        if (user) return resolve(true);
+        const next = encodeURIComponent(location.pathname + location.search + location.hash);
+        location.href = `index.html?auth=1&next=${next}`;
+        resolve(false);
+      });
+    });
+  }
+
   const DATA_URL = "https://script.google.com/macros/s/AKfycbxme0FmUWdOmNG5EVHKxkQkbm0alqCo6vWJgESo8SBzwIQunlTU0f9MdGlEqu2AqkQa/exec";
 
   const CACHE_KEY = "pdf_catalog_cache_v2";
@@ -354,11 +391,6 @@
 
   function driveShareUrl(fileId) {
     return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view?usp=sharing`;
-  }
-
-  function viewUrl(fileId, title) {
-    const base = `report.html?id=${encodeURIComponent(fileId)}&view=1`;
-    return title ? `${base}&t=${encodeURIComponent(title)}` : base;
   }
 
   function reportUrl(fileId, title) {
@@ -496,7 +528,6 @@
 
     // Reader
     document.getElementById("pdfFrame").src = drivePreviewUrl(item.id);
-    document.getElementById("viewBtn").href = viewUrl(item.id, item.title || "");
 
     setMetaTable(item);
 
@@ -599,7 +630,6 @@
               <button class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50" data-action="save" data-id="${esc(it.id)}">
                 ${inList ? "Saved" : "Save"}
               </button>
-              <a class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50" target="_blank" rel="noopener" href="${viewUrl(it.id, it.title || "")}">View</a>
             </div>
           </div>
         </div>
@@ -627,7 +657,7 @@
     }
   }
 
-  (async function init() {
+  async function initReport_() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
     const titleHint = params.get("t") || "";
@@ -641,7 +671,6 @@
 
     // Always show reader immediately
     document.getElementById("pdfFrame").src = drivePreviewUrl(id);
-    document.getElementById("viewBtn").href = viewUrl(id, titleHint);
 
     // Title hint (instant)
     if (titleHint) {
@@ -769,7 +798,7 @@
   
     // Comments
     loadCommentsOnReport_(id);
-})();
+}
 
   // -------- Comments (global, via Apps Script) --------
   function commentsBase_() {
@@ -866,6 +895,7 @@
     });
   });
 
+  guardRouteAuth_().then((ok) => { if (ok) initReport_(); });
 </script>
 
 </body>

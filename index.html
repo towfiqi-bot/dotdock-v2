@@ -677,6 +677,20 @@
   let fbDb = null;
   // ===== Firebase end =====
 
+  // ===== Firebase start =====
+  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
+  const FIREBASE_CONFIG_BASE = {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    appId: ""
+  };
+  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
+  let fbApp = null;
+  let fbAuth = null;
+  let fbDb = null;
+  // ===== Firebase end =====
+
   // Set these later
   const NEWSLETTER_URL = "";
   const SUBMIT_FORM_URL = "";  // optional: link to a Google Form / Typeform
@@ -4260,7 +4274,8 @@ document.addEventListener("visibilitychange", () => {
 
     });
 
-    document.getElementById("readingListWrap").addEventListener("click", (e) => {
+    const readingListWrap = document.getElementById("readingListWrap");
+    if (readingListWrap) readingListWrap.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-action]");
       if (!btn) return;
       const action = btn.getAttribute("data-action");
@@ -4271,7 +4286,8 @@ document.addEventListener("visibilitychange", () => {
       if (action === "compare") toggleCompare(id);
     });
 
-    document.getElementById("pinnedBasketWrap").addEventListener("click", (e) => {
+    const pinnedBasketWrap = document.getElementById("pinnedBasketWrap");
+    if (pinnedBasketWrap) pinnedBasketWrap.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-action='pin_remove']");
       if (!btn) return;
       const id = btn.getAttribute("data-id");
@@ -4282,7 +4298,8 @@ document.addEventListener("visibilitychange", () => {
       showToast("Removed from pinned basket.");
     });
 
-    document.getElementById("compareWrap").addEventListener("click", (e) => {
+    const compareWrap = document.getElementById("compareWrap");
+    if (compareWrap) compareWrap.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-action='compare']");
       if (!btn) return;
       const id = btn.getAttribute("data-id");

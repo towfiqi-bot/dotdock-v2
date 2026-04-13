@@ -596,7 +596,8 @@
   </div>
 
 
-  <!-- Optional project-local config (keep this file in your repo/deploy to avoid re-editing index.html) -->
+  <!-- Optional project-local config (keep these files in your repo/deploy to avoid re-editing index.html) -->
+  <script src="app-config.js"></script>
   <script src="firebase-config.js"></script>
   <!-- Firebase (script-tag / compat build for static HTML) -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -604,9 +605,17 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
 <script>
-  const DATA_URL = "https://script.google.com/macros/s/AKfycbxme0FmUWdOmNG5EVHKxkQkbm0alqCo6vWJgESo8SBzwIQunlTU0f9MdGlEqu2AqkQa/exec";
+  const APP_CONFIG = (window.DOTDOCK_APP_CONFIG && typeof window.DOTDOCK_APP_CONFIG === "object")
+    ? window.DOTDOCK_APP_CONFIG
+    : {};
+  const DATA_URL = String(APP_CONFIG.dataUrl || "").trim();
 
   // Feature flags (safe toggles)
+
+  if (!DATA_URL) {
+    console.error("DOTDOCK_APP_CONFIG.dataUrl is missing.");
+  }
+
   const ENABLE_DEFAULT_FILTER_EXPAND = true;   // Year expanded on load; Category expanded if enabled
   const ENABLE_CATEGORY_FILTER = false;        // Hide Category filter section (requested)
   const ENABLE_SEARCH_SUGGEST = true;          // Google-like suggestions dropdown
@@ -1522,6 +1531,9 @@ Output:
   }
 
   async function loadData(forceFresh) {
+    if (!DATA_URL) {
+      throw new Error("Catalog URL not configured. Set DOTDOCK_APP_CONFIG.dataUrl in app-config.js.");
+    }
     if (!forceFresh) {
       const cached = cacheGet();
       if (cached) return cached;

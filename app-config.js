@@ -7,3 +7,4 @@ window.DOTDOCK_APP_CONFIG = window.DOTDOCK_APP_CONFIG || {
   // Example: "https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec?action=ask_dotdock"
   askApiUrl: ""
 };
+askApiUrl: "https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec?action=ask_dotdock"

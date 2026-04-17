@@ -59,6 +59,12 @@
       100% { transform: translateX(100%); }
     }
 
+    /* Ask dotdock widget */
+    #askDotdockPanel { max-height: min(78vh, 760px); }
+    #askDotdockMessages::-webkit-scrollbar { width: 10px; }
+    #askDotdockMessages::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
+    #askDotdockMessages::-webkit-scrollbar-track { background: transparent; }
+
 </style>
 </head>
 
@@ -414,6 +420,36 @@
           class="hidden fixed bottom-4 right-4 z-40 rounded-full bg-amber-600 text-white shadow-lg p-3 hover:bg-amber-700 transition">
     ↑
   </button>
+
+  <!-- Ask dotdock -->
+  <button id="askDotdockFab"
+          class="fixed bottom-4 right-20 z-[72] px-4 py-2 rounded-full shadow-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+    Ask dotdock
+  </button>
+
+  <section id="askDotdockPanel"
+           class="hidden fixed bottom-20 right-4 z-[73] w-[min(94vw,520px)] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
+      <div class="font-semibold text-gray-900">Ask dotdock</div>
+      <div class="text-[11px] text-gray-500">Repository-only answers</div>
+      <button id="askDotdockClose" class="ml-auto px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50">Close</button>
+    </div>
+
+    <div id="askDotdockMessages" class="px-4 py-3 space-y-3 max-h-[50vh] overflow-auto bg-gray-50">
+      <div class="text-sm text-gray-600">
+        Ask a question. We will use your dotdock repository documents and show references.
+      </div>
+    </div>
+
+    <div class="px-4 py-3 border-t border-gray-200">
+      <div class="flex gap-2">
+        <input id="askDotdockInput" type="text" class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
+               placeholder="Ask about your repository PDFs…" />
+        <button id="askDotdockSend" class="px-3 py-2 text-sm font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">Send</button>
+      </div>
+      <div id="askDotdockHint" class="mt-2 text-[11px] text-gray-500"></div>
+    </div>
+  </section>
 
   <!-- Toast -->
   <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm px-4 py-2 rounded shadow-lg"></div>
@@ -3004,6 +3040,104 @@ function setupNewPostsBtn_() {
   }
 
 
+
+  // --------- Ask dotdock ----------
+  function askTokenize_(s) {
+    return normalizeText(s).split(/\s+/g).filter(Boolean);
+  }
+
+  function askBuildReferences_(q, items, limit = 5) {
+    const qTokens = askTokenize_(q);
+    if (!qTokens.length) return [];
+
+    const scored = (items || []).map((it) => {
+      const hay = normalizeText((it.title || "") + " " + (it.summary || ""));
+      let score = 0;
+      for (const tok of qTokens) {
+        if (tok.length < 2) continue;
+        if (hay.includes(tok)) score += 1;
+      }
+      return { it, score };
+    })
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+
+    return scored.map(({ it }) => ({
+      id: String(it.id || ""),
+      title: String(it.title || "Untitled"),
+      summary: String(it.summary || ""),
+      thumbUrl: String(it.thumbUrl || ""),
+      href: reportPageUrl(it.id, it.title || "")
+    }));
+  }
+
+  function askFallbackAnswer_(q, refs) {
+    if (!refs.length) {
+      return "I couldn’t find enough matching content in your current repository index. Try a more specific query.";
+    }
+    const lines = refs.map((r, i) => {
+      const s = String(r.summary || "").trim();
+      const brief = s ? (s.length > 180 ? s.slice(0, 180) + "…" : s) : "No summary available yet.";
+      return `${i + 1}. ${r.title}: ${brief}`;
+    });
+    return `Here are the most relevant repository reports for your question (“${q}”):\n\n` + lines.join("\n");
+  }
+
+  async function askDotdockRemote_(q, refs) {
+    const askApiUrl = String(APP_CONFIG.askApiUrl || "").trim();
+    if (!askApiUrl) return null;
+
+    const payload = {
+      q: String(q || ""),
+      references: refs.map(r => ({ id: r.id, title: r.title, summary: r.summary }))
+    };
+
+    const res = await fetch(askApiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("ask-dotdock backend failed: " + res.status);
+    return await res.json();
+  }
+
+  function askRenderResponse_(q, answer, refs) {
+    const wrap = document.getElementById("askDotdockMessages");
+    if (!wrap) return;
+
+    const userHtml = `
+      <div class="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+        <div class="font-semibold mb-1">You</div>
+        <div>${escapeHtml(q)}</div>
+      </div>
+    `;
+
+    const refsHtml = refs.map((r) => `
+      <a href="${escapeHtml(r.href)}" class="block border border-gray-200 rounded p-2 bg-white hover:bg-gray-50">
+        <div class="flex gap-2">
+          <img src="${escapeHtml(r.thumbUrl || "https://via.placeholder.com/80x112?text=PDF")}" class="w-10 h-14 object-cover rounded border border-gray-200 bg-gray-100" alt="thumb">
+          <div class="min-w-0"><div class="text-sm font-semibold text-gray-800 line-clamp-2">${escapeHtml(r.title)}</div></div>
+        </div>
+      </a>
+    `).join("");
+
+    const botHtml = `
+      <div class="bg-white border border-gray-200 rounded p-3 text-sm text-gray-800">
+        <div class="font-semibold mb-1">Ask dotdock</div>
+        <div class="whitespace-pre-wrap leading-relaxed">${escapeHtml(answer)}</div>
+        <div class="mt-3">
+          <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">References</div>
+          <div class="space-y-2">${refsHtml || "<div class='text-xs text-gray-500'>No references found.</div>"}</div>
+        </div>
+      </div>
+    `;
+
+    wrap.insertAdjacentHTML("beforeend", userHtml + botHtml);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+
   // --------- DOM events ----------
   document.addEventListener("DOMContentLoaded", async () => {
     // ===== Firebase start =====
@@ -3174,6 +3308,12 @@ function setupNewPostsBtn_() {
     const stickyInput = document.getElementById("stickySearchInput");
     const stickyBtn = document.getElementById("stickySearchBtn");
     const stickyClearBtn = document.getElementById("stickySearchClearBtn");
+    const askFab = document.getElementById("askDotdockFab");
+    const askPanel = document.getElementById("askDotdockPanel");
+    const askClose = document.getElementById("askDotdockClose");
+    const askSend = document.getElementById("askDotdockSend");
+    const askInput = document.getElementById("askDotdockInput");
+    const askHint = document.getElementById("askDotdockHint");
 
     // Sidebar toggle (desktop)
     const sidebar = document.getElementById("sidebar");
@@ -4353,6 +4493,57 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
         closeCompareModalAndClear();
       }
     });
+
+
+    // Ask dotdock interactions
+    if (askFab && askPanel) {
+      askFab.addEventListener("click", () => {
+        askPanel.classList.toggle("hidden");
+        if (!askPanel.classList.contains("hidden") && askInput) askInput.focus();
+      });
+    }
+    if (askClose && askPanel) {
+      askClose.addEventListener("click", () => askPanel.classList.add("hidden"));
+    }
+
+    async function askSubmit_() {
+      const q = String(askInput?.value || "").trim();
+      if (!q) return;
+      if (askSend) askSend.disabled = true;
+      if (askHint) askHint.textContent = "Searching repository…";
+      try {
+        const refs = askBuildReferences_(q, state.allItems || [], 5);
+        let answer = "";
+        try {
+          const remote = await askDotdockRemote_(q, refs);
+          answer = (remote && remote.ok && remote.answer)
+            ? String(remote.answer)
+            : askFallbackAnswer_(q, refs);
+        } catch {
+          answer = askFallbackAnswer_(q, refs);
+        }
+        askRenderResponse_(q, answer, refs);
+        if (askInput) askInput.value = "";
+        if (askHint) {
+          const askApiUrl = String(APP_CONFIG.askApiUrl || "").trim();
+          askHint.textContent = askApiUrl
+            ? "Answer generated using Ask dotdock backend."
+            : "Ask backend not configured yet. Showing repository-grounded fallback answer.";
+        }
+      } finally {
+        if (askSend) askSend.disabled = false;
+      }
+    }
+
+    if (askSend) askSend.addEventListener("click", askSubmit_);
+    if (askInput) {
+      askInput.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          askSubmit_();
+        }
+      });
+    }
 
     setupNewPostsBtn_();
     setupInfiniteScroll();

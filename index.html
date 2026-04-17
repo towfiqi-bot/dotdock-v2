@@ -35,7 +35,8 @@
 
     /* Hide sticky UI while an overlay (PDF/Compare) is open */
     body.dd-overlay-open #stickySearchDock,
-    body.dd-overlay-open #sidebarShowBtn {
+    body.dd-overlay-open #sidebarShowBtn,
+    body.dd-overlay-open #readingListDock {
       display: none !important;
     }
 
@@ -57,6 +58,12 @@
     @keyframes dd-shimmer {
       100% { transform: translateX(100%); }
     }
+
+    /* Ask dotdock widget */
+    #askDotdockPanel { max-height: min(78vh, 760px); }
+    #askDotdockMessages::-webkit-scrollbar { width: 10px; }
+    #askDotdockMessages::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
+    #askDotdockMessages::-webkit-scrollbar-track { background: transparent; }
 
 </style>
 </head>
@@ -124,11 +131,6 @@
                   </span>
                 </div>
 
-                <div id="authHeaderBox" class="w-full flex flex-wrap items-center justify-end gap-2 text-[11px] text-gray-600">
-                  <span id="authStatusText" class="px-2 py-1 rounded-full border border-gray-200 bg-white">Signed out</span>
-                  <button id="authOpenModalBtn" type="button" class="px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Sign in</button>
-                  <button id="authLogoutBtn" type="button" class="hidden px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Logout</button>
-                </div>
               </div>
             </div>
           </div>
@@ -250,30 +252,6 @@
           <div id="userRefreshStatus" class="text-xs text-gray-500 mt-2"></div>
         </section>
 
-        <!-- Reading list -->
-        <section class="bg-white rounded-lg border border-gray-200 p-4">
-          <div class="flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-gray-700">Reading list</h2>
-            <button id="toggleReadingList"
-                    class="text-xs font-semibold text-amber-700 hover:underline">
-              Show
-            </button>
-          </div>
-
-          <div id="readingListEmpty" class="text-xs text-gray-500 mt-2">
-            No items yet. Click “Add to reading list” on any card.
-          </div>
-
-          <div id="readingListWrap" class="hidden mt-3 space-y-2"></div>
-
-          <div class="mt-3 flex gap-2">
-            <button id="clearReadingListBtn"
-                    class="px-3 py-1.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">
-              Clear list
-            </button>
-          </div>
-        </section>
-
         <!-- Search and compare -->
         <section class="bg-white rounded-lg border border-gray-200 p-4">
           <div class="flex items-center justify-between">
@@ -336,22 +314,6 @@
           </div>
         </section>
 
-        <!-- Pinned basket -->
-        <section class="bg-white rounded-lg border border-gray-200 p-4">
-          <div class="flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-gray-700">Pinned basket</h2>
-            <span id="pinnedBasketCount" class="px-2 py-0.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700">0</span>
-          </div>
-          <div id="pinnedBasketEmpty" class="text-xs text-gray-500 mt-2">No pinned reports yet.</div>
-          <div id="pinnedBasketWrap" class="hidden mt-3 space-y-2"></div>
-          <div class="mt-3">
-            <button id="clearPinnedBasketBtn"
-                    class="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">
-              Unpin all
-            </button>
-          </div>
-        </section>
-
         <!-- Clear filters -->
         <button id="clearFilters"
                 class="w-full text-sm border border-gray-300 rounded-md py-1.5 bg-white hover:bg-gray-50">
@@ -360,7 +322,7 @@
       </aside>
 
       <!-- Catalogue -->
-      <section id="catalogue" class="order-1 md:order-2 md:col-span-9">
+      <section id="catalogue" class="order-1 md:order-2 md:col-span-9 xl:col-span-7">
     <!-- Top search -->
     <section id="searchSection" class="mb-4">
       <div class="bg-white border border-gray-200 rounded-lg p-3 md:p-4 shadow-sm">
@@ -407,8 +369,7 @@
           <p id="resultsInfo" class="text-sm text-gray-600">Loading publications…</p>
           <div class="flex items-center gap-2">
             <button id="loadMoreTopBtn" type="button" class="hidden md:inline-flex px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">Load more</button>
-            <button id="pinBoostToggleBtn" type="button" class="px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">Pinned first: Off</button>
-            <label for="sortSelect" class="text-xs text-gray-500 hidden sm:block">Sort</label>
+                        <label for="sortSelect" class="text-xs text-gray-500 hidden sm:block">Sort</label>
             <select id="sortSelect" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white">
               <option value="newest">Sort (Default - Newest)</option>
               <option value="updated_newest">Recently Updated</option>
@@ -429,6 +390,29 @@
           © 2026 Towfiq — Platform and original content. Third-party PDFs belong to their respective owners.
         </footer>
       </section>
+      <!-- Reading list rail (desktop right side only; does not overlap cards) -->
+      <aside id="readingListRail" class="order-3 hidden xl:block xl:col-span-2">
+        <div id="readingListDock" class="hidden sticky top-28 bg-white border border-gray-200 rounded-xl shadow-sm p-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-700">Reading list</h2>
+            <div class="flex items-center gap-2">
+              <span id="readingListCount" class="px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-xs font-semibold text-amber-700">0</span>
+              <button id="toggleReadingList" class="text-xs font-semibold text-amber-700 hover:underline">Hide</button>
+            </div>
+          </div>
+
+          <div id="readingListEmpty" class="text-xs text-gray-500 mt-2 hidden">
+            No items yet. Click “Add to reading list” on any card.
+          </div>
+
+          <div id="readingListWrap" class="mt-3 max-h-[62vh] overflow-auto space-y-3"></div>
+
+          <div class="mt-3">
+            <button id="clearReadingListBtn" class="w-full px-3 py-1.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">Clear list</button>
+          </div>
+        </div>
+      </aside>
+
     </div>
   </main>
 
@@ -436,6 +420,36 @@
           class="hidden fixed bottom-4 right-4 z-40 rounded-full bg-amber-600 text-white shadow-lg p-3 hover:bg-amber-700 transition">
     ↑
   </button>
+
+  <!-- Ask dotdock -->
+  <button id="askDotdockFab"
+          class="fixed bottom-4 right-20 z-[72] px-4 py-2 rounded-full shadow-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+    Ask dotdock
+  </button>
+
+  <section id="askDotdockPanel"
+           class="hidden fixed bottom-20 right-4 z-[73] w-[min(94vw,520px)] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
+      <div class="font-semibold text-gray-900">Ask dotdock</div>
+      <div class="text-[11px] text-gray-500">Repository-only answers</div>
+      <button id="askDotdockClose" class="ml-auto px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50">Close</button>
+    </div>
+
+    <div id="askDotdockMessages" class="px-4 py-3 space-y-3 max-h-[50vh] overflow-auto bg-gray-50">
+      <div class="text-sm text-gray-600">
+        Ask a question. We will use your dotdock repository documents and show references.
+      </div>
+    </div>
+
+    <div class="px-4 py-3 border-t border-gray-200">
+      <div class="flex gap-2">
+        <input id="askDotdockInput" type="text" class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
+               placeholder="Ask about your repository PDFs…" />
+        <button id="askDotdockSend" class="px-3 py-2 text-sm font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">Send</button>
+      </div>
+      <div id="askDotdockHint" class="mt-2 text-[11px] text-gray-500"></div>
+    </div>
+  </section>
 
   <!-- Toast -->
   <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm px-4 py-2 rounded shadow-lg"></div>
@@ -479,6 +493,9 @@
       <path d="M18 9l3 3-3 3"></path>
     </svg>
   </button>
+
+
+
 
 
   <!-- PDF Modal -->
@@ -615,7 +632,8 @@
   </div>
 
 
-  <!-- Optional project-local config (keep this file in your repo/deploy to avoid re-editing index.html) -->
+  <!-- Optional project-local config (keep these files in your repo/deploy to avoid re-editing index.html) -->
+  <script src="app-config.js"></script>
   <script src="firebase-config.js"></script>
   <!-- Firebase (script-tag / compat build for static HTML) -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -623,9 +641,17 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
 <script>
-  const DATA_URL = "https://script.google.com/macros/s/AKfycbxme0FmUWdOmNG5EVHKxkQkbm0alqCo6vWJgESo8SBzwIQunlTU0f9MdGlEqu2AqkQa/exec";
+  const APP_CONFIG = (window.DOTDOCK_APP_CONFIG && typeof window.DOTDOCK_APP_CONFIG === "object")
+    ? window.DOTDOCK_APP_CONFIG
+    : {};
+  const DATA_URL = String(APP_CONFIG.dataUrl || "").trim();
 
   // Feature flags (safe toggles)
+
+  if (!DATA_URL) {
+    console.error("DOTDOCK_APP_CONFIG.dataUrl is missing.");
+  }
+
   const ENABLE_DEFAULT_FILTER_EXPAND = true;   // Year expanded on load; Category expanded if enabled
   const ENABLE_CATEGORY_FILTER = false;        // Hide Category filter section (requested)
   const ENABLE_SEARCH_SUGGEST = true;          // Google-like suggestions dropdown
@@ -647,7 +673,6 @@
   const WORKSPACE_KEY = "dotdock_workspace_v1";
   const COMPARE_KEY = "dotdock_compare_v1";
   const LIKE_KEY = "dotdock_likes_v1";
-  const PIN_BOOST_KEY = "dotdock_pin_boost_enabled_v1";
 
   // ===== Firebase start =====
   // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
@@ -663,47 +688,8 @@
   let fbDb = null;
   // ===== Firebase end =====
 
-  // ===== Firebase start =====
-  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
-  const FIREBASE_CONFIG_BASE = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    appId: ""
-  };
-  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
-  let fbApp = null;
-  let fbAuth = null;
-  let fbDb = null;
-  // ===== Firebase end =====
 
-  // ===== Firebase start =====
-  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
-  const FIREBASE_CONFIG_BASE = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    appId: ""
-  };
-  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
-  let fbApp = null;
-  let fbAuth = null;
-  let fbDb = null;
-  // ===== Firebase end =====
 
-  // ===== Firebase start =====
-  // Fill these from your Firebase project settings (or set window.DOTDOCK_FIREBASE_CONFIG before this script).
-  const FIREBASE_CONFIG_BASE = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    appId: ""
-  };
-  let FIREBASE_CONFIG = { ...FIREBASE_CONFIG_BASE };
-  let fbApp = null;
-  let fbAuth = null;
-  let fbDb = null;
-  // ===== Firebase end =====
 
   // Set these later
   const NEWSLETTER_URL = "";
@@ -798,6 +784,13 @@
     const info = document.getElementById("resultsInfo");
     if (!info) return;
     const msg = ev?.message ? String(ev.message) : "Unexpected script error";
+    info.textContent = "Load error: " + msg;
+  });
+  window.addEventListener("unhandledrejection", (ev) => {
+    const info = document.getElementById("resultsInfo");
+    if (!info) return;
+    const reason = ev?.reason;
+    const msg = (reason && reason.message) ? String(reason.message) : String(reason || "Unhandled promise rejection");
     info.textContent = "Load error: " + msg;
   });
 
@@ -1084,9 +1077,6 @@
     const prev = ws[key] || {};
     ws[key] = { ...prev, ...patch, updatedAt: Date.now() };
     workspaceSet(ws);
-  }
-  function wsPinned(id) {
-    return !!wsItem(id).pinned;
   }
   function wsStatus(id) {
     return (wsItem(id).status || "").toLowerCase();
@@ -1577,6 +1567,9 @@ Output:
   }
 
   async function loadData(forceFresh) {
+    if (!DATA_URL) {
+      throw new Error("Catalog URL not configured. Set DOTDOCK_APP_CONFIG.dataUrl in app-config.js.");
+    }
     if (!forceFresh) {
       const cached = cacheGet();
       if (cached) return cached;
@@ -2207,7 +2200,6 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
       .map(c => `<span class="px-2 py-0.5 border rounded-full bg-gray-50">${escapeHtml(c)}</span>`)
       .join("");
 
-    const pinned = wsPinned(item.id);
     const status = wsStatus(item.id);
     const statusLabel = status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unread";
 
@@ -2218,7 +2210,6 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
 
     const addLabel = isInReadingList(item.id) ? "Remove from reading list" : "Add to reading list";
     const compareLabel = isCompared(item.id) ? "Compared" : "Compare";
-    const pinLabel = pinned ? "Unpin" : "Pin";
 
     const liked = isLiked(item.id);
     const likes = likeCount(item.id);
@@ -2258,9 +2249,6 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
               ${addedTs ? `<span class="text-gray-300">•</span><span>${escapeHtml(addedLabel)}</span>` : ``}
               ${updatedTs ? `<span class="text-gray-300">•</span><span>${escapeHtml(updatedLabel)}</span>` : ``}
               ${isNew ? `<span class="ml-2 px-2 py-0.5 rounded-full border border-red-200 bg-red-50 text-red-700 text-[10px] font-bold tracking-wide">NEW</span>` : ``}
-              ${pinned ? `<span class="text-amber-600 flex items-center gap-1 shrink-0 ml-auto" title="Pinned">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 2l-1 1v5.2l4.6 4.6-1.4 1.4L11 9.6V3l-1-1h4zM5 14l5 5v3H8v-2.2L3.4 15.4 5 14z"/></svg>
-                <span class="text-xs font-semibold">Pinned</span></span>` : ""}
             </div>
 
             <a href="${reportPageUrl(item.id, item.title || "") }"
@@ -2289,14 +2277,6 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
               <button data-action="aisummary" data-id="${escapeHtml(item.id)}"
                  class="px-3 py-1.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">
                 AI summary
-              </button>
-
-              <button data-action="pin" data-id="${escapeHtml(item.id)}"
-                 class="px-3 py-1.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">
-                <span class="inline-flex items-center gap-1">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 2l-1 1v5.2l4.6 4.6-1.4 1.4L11 9.6V3l-1-1h4zM5 14l5 5v3H8v-2.2L3.4 15.4 5 14z"/></svg>
-                  <span>${escapeHtml(pinLabel)}</span>
-                </span>
               </button>
 
             </div>
@@ -2413,7 +2393,6 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
 
     container.innerHTML = itemsToShow.map(renderCard).join("");
     updateCommentCountBadges_();
-    renderPinnedBasket();
 
     window.dispatchEvent(new CustomEvent("dd:rendered"));
 
@@ -2512,73 +2491,54 @@ function openPdfModalById(id) {
     if (item) openPdfModal(item);
   }
 
-  // --------- Reading list UI ----------
+  // --------- Reading list dock UI ----------
   function renderReadingList() {
+    const rail = document.getElementById("readingListRail");
+    const section = document.getElementById("readingListDock");
     const wrap = document.getElementById("readingListWrap");
     const empty = document.getElementById("readingListEmpty");
-    const ids = readingGet();
+    const countEl = document.getElementById("readingListCount");
+    const toggleBtn = document.getElementById("toggleReadingList");
+    if (!rail || !section || !wrap || !empty || !countEl || !toggleBtn) return;
 
-    if (ids.length === 0) {
+    const ids = readingGet();
+    const total = ids.length;
+    countEl.textContent = String(total);
+
+    const isOpen = !wrap.classList.contains("hidden");
+    if (total === 0) {
+      section.classList.add("hidden");
       empty.classList.remove("hidden");
       wrap.classList.add("hidden");
       wrap.innerHTML = "";
+      toggleBtn.textContent = "Show";
       return;
     }
 
+    section.classList.remove("hidden");
     empty.classList.add("hidden");
-    wrap.classList.remove("hidden");
+    if (!isOpen) {
+      wrap.classList.remove("hidden");
+      toggleBtn.textContent = "Hide";
+    }
 
     const itemsById = new Map(state.allItems.map(it => [String(it.id), it]));
     wrap.innerHTML = ids.map(id => {
       const it = itemsById.get(String(id));
       if (!it) return "";
+      const thumb = escapeHtml(it.thumbUrl || "https://via.placeholder.com/96x132?text=PDF");
       return `
-        <div class="border border-gray-200 rounded p-2 bg-gray-50">
-          <div class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(it.title || "Untitled")}</div>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <a href="${reportPageUrl(it.id, it.title || "")}" class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50">Open</a>
-            <button data-action="modal" data-id="${escapeHtml(it.id)}" class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50">Preview</button>
-            <button data-action="reading" data-id="${escapeHtml(it.id)}" class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50">Remove</button>
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
-
-  function pinnedIds_() {
-    const ws = workspaceGet();
-    return Object.keys(ws).filter((id) => ws[id] && ws[id].pinned);
-  }
-
-  function renderPinnedBasket() {
-    const countEl = document.getElementById("pinnedBasketCount");
-    const emptyEl = document.getElementById("pinnedBasketEmpty");
-    const wrap = document.getElementById("pinnedBasketWrap");
-    if (!countEl || !emptyEl || !wrap) return;
-
-    const ids = pinnedIds_();
-    countEl.textContent = String(ids.length);
-
-    if (ids.length === 0) {
-      emptyEl.classList.remove("hidden");
-      wrap.classList.add("hidden");
-      wrap.innerHTML = "";
-      return;
-    }
-
-    const itemsById = new Map(state.allItems.map(it => [String(it.id), it]));
-    emptyEl.classList.add("hidden");
-    wrap.classList.remove("hidden");
-    wrap.innerHTML = ids.map((id) => {
-      const it = itemsById.get(String(id));
-      const title = it ? (it.title || "Untitled") : `Report ${id}`;
-      const href = it ? reportPageUrl(it.id, it.title || "") : "#";
-      return `
-        <div class="border border-gray-200 rounded p-2 bg-gray-50">
-          <div class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(title)}</div>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <a href="${href}" class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50">Open</a>
-            <button data-action="pin_remove" data-id="${escapeHtml(id)}" class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50">Unpin</button>
+        <div class="border border-gray-200 rounded-lg p-2 bg-white">
+          <div class="flex gap-2">
+            <a href="${reportPageUrl(it.id, it.title || "")}" class="shrink-0" aria-label="Open report">
+              <img src="${thumb}" alt="${escapeHtml(it.title || "Untitled")}" class="w-14 h-20 object-cover rounded border border-gray-200 bg-gray-50">
+            </a>
+            <div class="min-w-0 flex-1">
+              <a href="${reportPageUrl(it.id, it.title || "")}" class="text-sm font-semibold text-amber-700 hover:underline line-clamp-2">${escapeHtml(it.title || "Untitled")}</a>
+              <div class="mt-2 flex items-center gap-2">
+                <button data-action="reading" data-id="${escapeHtml(it.id)}" class="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50">Remove</button>
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -2742,8 +2702,7 @@ function openPdfModalById(id) {
         <div class="space-y-3">
           <p class="text-gray-600">Add your glossary terms here (later we can make it its own page).</p>
           <ul class="list-disc ml-5 text-gray-700">
-            <li><span class="font-semibold">Pinned</span>: Shows at the top of the catalog (local).</li>
-            <li><span class="font-semibold">Reading list</span>: Save items locally to revisit.</li>
+            <li><span class="font-semibold">Reading list</span>: Quick local basket for reports you want to open.</li>
             <li><span class="font-semibold">Topics</span>: Auto keywords extracted from titles.</li>
           </ul>
         </div>
@@ -3059,6 +3018,126 @@ function setupNewPostsBtn_() {
 
 
   
+  /**
+   * ===== Auth helpers =====
+   * Keep auth/redirect logic isolated and project-path safe (GitHub Pages).
+   */
+  function safeReturnFromAuth_() {
+    const p = new URLSearchParams(location.search);
+    const next = p.get("next");
+    if (!next) return false;
+
+    let decoded = "";
+    try { decoded = decodeURIComponent(next); } catch (e) { decoded = String(next); }
+    if (!decoded) return false;
+
+    const baseDir = location.pathname.replace(/[^/]*$/, "");
+    const target = new URL(decoded, location.origin + baseDir);
+    if (target.origin !== location.origin) return false;
+
+    location.href = target.toString();
+    return true;
+  }
+
+
+
+  // --------- Ask dotdock ----------
+  function askTokenize_(s) {
+    return normalizeText(s).split(/\s+/g).filter(Boolean);
+  }
+
+  function askBuildReferences_(q, items, limit = 5) {
+    const qTokens = askTokenize_(q);
+    if (!qTokens.length) return [];
+
+    const scored = (items || []).map((it) => {
+      const hay = normalizeText((it.title || "") + " " + (it.summary || ""));
+      let score = 0;
+      for (const tok of qTokens) {
+        if (tok.length < 2) continue;
+        if (hay.includes(tok)) score += 1;
+      }
+      return { it, score };
+    })
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+
+    return scored.map(({ it }) => ({
+      id: String(it.id || ""),
+      title: String(it.title || "Untitled"),
+      summary: String(it.summary || ""),
+      thumbUrl: String(it.thumbUrl || ""),
+      href: reportPageUrl(it.id, it.title || "")
+    }));
+  }
+
+  function askFallbackAnswer_(q, refs) {
+    if (!refs.length) {
+      return "I couldn’t find enough matching content in your current repository index. Try a more specific query.";
+    }
+    const lines = refs.map((r, i) => {
+      const s = String(r.summary || "").trim();
+      const brief = s ? (s.length > 180 ? s.slice(0, 180) + "…" : s) : "No summary available yet.";
+      return `${i + 1}. ${r.title}: ${brief}`;
+    });
+    return `Here are the most relevant repository reports for your question (“${q}”):\n\n` + lines.join("\n");
+  }
+
+  async function askDotdockRemote_(q, refs) {
+    const askApiUrl = String(APP_CONFIG.askApiUrl || "").trim();
+    if (!askApiUrl) return null;
+
+    const payload = {
+      q: String(q || ""),
+      references: refs.map(r => ({ id: r.id, title: r.title, summary: r.summary }))
+    };
+
+    const res = await fetch(askApiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("ask-dotdock backend failed: " + res.status);
+    return await res.json();
+  }
+
+  function askRenderResponse_(q, answer, refs) {
+    const wrap = document.getElementById("askDotdockMessages");
+    if (!wrap) return;
+
+    const userHtml = `
+      <div class="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+        <div class="font-semibold mb-1">You</div>
+        <div>${escapeHtml(q)}</div>
+      </div>
+    `;
+
+    const refsHtml = refs.map((r) => `
+      <a href="${escapeHtml(r.href)}" class="block border border-gray-200 rounded p-2 bg-white hover:bg-gray-50">
+        <div class="flex gap-2">
+          <img src="${escapeHtml(r.thumbUrl || "https://via.placeholder.com/80x112?text=PDF")}" class="w-10 h-14 object-cover rounded border border-gray-200 bg-gray-100" alt="thumb">
+          <div class="min-w-0"><div class="text-sm font-semibold text-gray-800 line-clamp-2">${escapeHtml(r.title)}</div></div>
+        </div>
+      </a>
+    `).join("");
+
+    const botHtml = `
+      <div class="bg-white border border-gray-200 rounded p-3 text-sm text-gray-800">
+        <div class="font-semibold mb-1">Ask dotdock</div>
+        <div class="whitespace-pre-wrap leading-relaxed">${escapeHtml(answer)}</div>
+        <div class="mt-3">
+          <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">References</div>
+          <div class="space-y-2">${refsHtml || "<div class='text-xs text-gray-500'>No references found.</div>"}</div>
+        </div>
+      </div>
+    `;
+
+    wrap.insertAdjacentHTML("beforeend", userHtml + botHtml);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+
   // --------- DOM events ----------
   document.addEventListener("DOMContentLoaded", async () => {
     // ===== Firebase start =====
@@ -3096,15 +3175,7 @@ function setupNewPostsBtn_() {
         state.authUser = user || null;
         setAuthUiState_(user || null);
         render();
-        if (user) {
-          const p = new URLSearchParams(location.search);
-          const next = p.get("next");
-          if (next) {
-            const decoded = decodeURIComponent(next);
-            location.href = decoded.startsWith("/") ? decoded : ("/" + decoded);
-            return;
-          }
-        }
+        if (user && safeReturnFromAuth_()) return;
         if (user) {
           try { await bootstrapUserDoc_(user); }
           catch (e) { console.warn("User bootstrap failed:", e); }
@@ -3237,6 +3308,12 @@ function setupNewPostsBtn_() {
     const stickyInput = document.getElementById("stickySearchInput");
     const stickyBtn = document.getElementById("stickySearchBtn");
     const stickyClearBtn = document.getElementById("stickySearchClearBtn");
+    const askFab = document.getElementById("askDotdockFab");
+    const askPanel = document.getElementById("askDotdockPanel");
+    const askClose = document.getElementById("askDotdockClose");
+    const askSend = document.getElementById("askDotdockSend");
+    const askInput = document.getElementById("askDotdockInput");
+    const askHint = document.getElementById("askDotdockHint");
 
     // Sidebar toggle (desktop)
     const sidebar = document.getElementById("sidebar");
@@ -3366,10 +3443,8 @@ function setupNewPostsBtn_() {
     const wsStatusFilter = document.getElementById("wsStatusFilter");
     const wsTagFilter = document.getElementById("wsTagFilter");
     const exportWsBtn = document.getElementById("exportWorkspaceBtn");
-    const clearPinnedBasketBtn = document.getElementById("clearPinnedBasketBtn");
     const clearCompareBtn = document.getElementById("clearCompareBtn");
     const sortSelect = document.getElementById("sortSelect");
-    const pinBoostToggleBtn = document.getElementById("pinBoostToggleBtn");
     const newsletterBtn = document.getElementById("newsletterBtn");
     const trendsList = document.getElementById("trendsList");
     const liveUpdatesListEl = document.getElementById("liveUpdatesList");
@@ -3380,12 +3455,6 @@ function setupNewPostsBtn_() {
 
     setTabFromUrl();
 
-    try { state.pinBoostEnabled = (localStorage.getItem(PIN_BOOST_KEY) === "1"); } catch (e) {}
-    function renderPinBoostBtn_() {
-      if (!pinBoostToggleBtn) return;
-      pinBoostToggleBtn.textContent = `Pinned first: ${state.pinBoostEnabled ? "On" : "Off"}`;
-    }
-    renderPinBoostBtn_();
 
     function switchTab_(tab) {
       state.tab = (tab === "today") ? "today" : "home";
@@ -3932,13 +4001,8 @@ document.addEventListener("visibilitychange", () => {
     toggleReading.addEventListener("click", () => {
       const wrap = document.getElementById("readingListWrap");
       const isHidden = wrap.classList.contains("hidden");
-      if (isHidden) {
-        wrap.classList.remove("hidden");
-        toggleReading.textContent = "Hide";
-      } else {
-        wrap.classList.add("hidden");
-        toggleReading.textContent = "Show";
-      }
+      wrap.classList.toggle("hidden", !isHidden);
+      toggleReading.textContent = isHidden ? "Hide" : "Show";
     });
     clearReading.addEventListener("click", () => {
       readingSet([]);
@@ -3955,16 +4019,6 @@ document.addEventListener("visibilitychange", () => {
       applyFilters();
     });
     if (exportWsBtn) exportWsBtn.addEventListener("click", exportWorkspace);
-    if (clearPinnedBasketBtn) clearPinnedBasketBtn.addEventListener("click", () => {
-      const ws = workspaceGet();
-      Object.keys(ws).forEach((id) => {
-        if (ws[id] && ws[id].pinned) ws[id].pinned = false;
-      });
-      workspaceSet(ws);
-      showToast("All pins cleared.");
-      renderPinnedBasket();
-      applyFilters(true);
-    });
 
     if (clearCompareBtn) clearCompareBtn.addEventListener("click", () => {
       compareSet([]);
@@ -4211,21 +4265,6 @@ document.addEventListener("visibilitychange", () => {
       if (action === "reading") toggleReadingItem(id);
       if (action === "compare") toggleCompare(id);
 
-      if (action === "pin") {
-        const pinned = wsPinned(id);
-        wsSetItem(id, { pinned: !pinned });
-        renderPinnedBasket();
-        renderCompare();
-        applyFilters();
-        showToast(!pinned ? "Added to pinned basket." : "Removed from pinned basket.");
-      }
-      if (action === "pin_remove") {
-        wsSetItem(id, { pinned: false });
-        renderPinnedBasket();
-        applyFilters(true);
-        showToast("Removed from pinned basket.");
-      }
-
       if (action === "notebooklm" && item) openInNotebookLM(item);
       if (action === "aisummary" && item) openSummaryModal(item);
 
@@ -4313,18 +4352,6 @@ document.addEventListener("visibilitychange", () => {
       if (action === "modal") openPdfModalById(id);
       if (action === "reading") toggleReadingItem(id);
       if (action === "compare") toggleCompare(id);
-    });
-
-    const pinnedBasketWrap = document.getElementById("pinnedBasketWrap");
-    if (pinnedBasketWrap) pinnedBasketWrap.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-action='pin_remove']");
-      if (!btn) return;
-      const id = btn.getAttribute("data-id");
-      if (!id) return;
-      wsSetItem(id, { pinned: false });
-      renderPinnedBasket();
-      applyFilters(true);
-      showToast("Removed from pinned basket.");
     });
 
     const compareWrap = document.getElementById("compareWrap");
@@ -4466,6 +4493,57 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
         closeCompareModalAndClear();
       }
     });
+
+
+    // Ask dotdock interactions
+    if (askFab && askPanel) {
+      askFab.addEventListener("click", () => {
+        askPanel.classList.toggle("hidden");
+        if (!askPanel.classList.contains("hidden") && askInput) askInput.focus();
+      });
+    }
+    if (askClose && askPanel) {
+      askClose.addEventListener("click", () => askPanel.classList.add("hidden"));
+    }
+
+    async function askSubmit_() {
+      const q = String(askInput?.value || "").trim();
+      if (!q) return;
+      if (askSend) askSend.disabled = true;
+      if (askHint) askHint.textContent = "Searching repository…";
+      try {
+        const refs = askBuildReferences_(q, state.allItems || [], 5);
+        let answer = "";
+        try {
+          const remote = await askDotdockRemote_(q, refs);
+          answer = (remote && remote.ok && remote.answer)
+            ? String(remote.answer)
+            : askFallbackAnswer_(q, refs);
+        } catch {
+          answer = askFallbackAnswer_(q, refs);
+        }
+        askRenderResponse_(q, answer, refs);
+        if (askInput) askInput.value = "";
+        if (askHint) {
+          const askApiUrl = String(APP_CONFIG.askApiUrl || "").trim();
+          askHint.textContent = askApiUrl
+            ? "Answer generated using Ask dotdock backend."
+            : "Ask backend not configured yet. Showing repository-grounded fallback answer.";
+        }
+      } finally {
+        if (askSend) askSend.disabled = false;
+      }
+    }
+
+    if (askSend) askSend.addEventListener("click", askSubmit_);
+    if (askInput) {
+      askInput.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          askSubmit_();
+        }
+      });
+    }
 
     setupNewPostsBtn_();
     setupInfiniteScroll();

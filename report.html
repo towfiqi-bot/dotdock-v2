@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="app-config.js"></script>
   <script src="firebase-config.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -217,12 +218,6 @@
                     class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm"
                     placeholder="Your notes for this report…"></textarea>
 
-          <div class="mt-3 flex gap-2">
-            <button id="pinBtn"
-                    class="px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50">
-              Pin
-            </button>
-          </div>
 
           <div class="text-[11px] text-gray-500 mt-2">
             Saved locally in your browser (no login).
@@ -293,6 +288,11 @@
     return cfg;
   }
 
+  // ===== Auth-specific route guard =====
+  function authEntryUrl_() {
+    return new URL("index.html", location.href);
+  }
+
   async function guardRouteAuth_() {
     const cfg = firebaseCfg_();
     const ready = !!(window.firebase && cfg.apiKey && cfg.projectId && cfg.appId);
@@ -313,19 +313,25 @@
           if (signOutBtn) {
             signOutBtn.onclick = async () => {
               await firebase.auth().signOut();
-              location.href = "index.html";
+              location.href = authEntryUrl_().toString();
             };
           }
           return resolve(true);
         }
         const next = encodeURIComponent(location.pathname + location.search + location.hash);
-        location.href = `index.html?auth=1&next=${next}`;
+        const entry = authEntryUrl_();
+        entry.searchParams.set("auth", "1");
+        entry.searchParams.set("next", next);
+        location.href = entry.toString();
         resolve(false);
       });
     });
   }
 
-  const DATA_URL = "https://script.google.com/macros/s/AKfycbxme0FmUWdOmNG5EVHKxkQkbm0alqCo6vWJgESo8SBzwIQunlTU0f9MdGlEqu2AqkQa/exec";
+  const APP_CONFIG = (window.DOTDOCK_APP_CONFIG && typeof window.DOTDOCK_APP_CONFIG === "object")
+    ? window.DOTDOCK_APP_CONFIG
+    : {};
+  const DATA_URL = String(APP_CONFIG.dataUrl || "").trim();
 
   const CACHE_KEY = "pdf_catalog_cache_v2";
   const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
@@ -562,7 +568,6 @@
     document.getElementById("wsStatus").value = (ws.status || "unread").toLowerCase();
     document.getElementById("wsTags").value = Array.isArray(ws.tags) ? ws.tags.join(", ") : "";
     document.getElementById("wsNotes").value = ws.notes || "";
-    document.getElementById("pinBtn").textContent = ws.pinned ? "Unpin" : "Pin";
 
     // Compare state
     const compared = compareGet().includes(String(item.id));
@@ -570,6 +575,7 @@
   }
 
   async function fetchCatalogFresh() {
+    if (!DATA_URL) throw new Error("Catalog URL not configured. Set DOTDOCK_APP_CONFIG.dataUrl in app-config.js.");
     const url = DATA_URL + (DATA_URL.includes("?") ? "&" : "?") + "cb=" + Date.now();
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error("Failed to load catalog (" + res.status + ")");
@@ -753,7 +759,6 @@
     const wsStatus = document.getElementById("wsStatus");
     const wsTags = document.getElementById("wsTags");
     const wsNotes = document.getElementById("wsNotes");
-    const pinBtn = document.getElementById("pinBtn");
     const exportBtn = document.getElementById("exportWsBtn");
 
     function saveWorkspace() {
@@ -768,14 +773,6 @@
     wsStatus.addEventListener("change", () => { saveWorkspace(); showToast("Workspace saved."); });
     wsTags.addEventListener("input", () => { saveWorkspace(); });
     wsNotes.addEventListener("input", () => { saveWorkspace(); });
-
-    pinBtn.addEventListener("click", () => {
-      const cur = wsItem(id);
-      const pinned = !!cur.pinned;
-      wsSetItem(id, { pinned: !pinned });
-      pinBtn.textContent = !pinned ? "Unpin" : "Pin";
-      showToast(!pinned ? "Pinned (shows at top of catalog)." : "Unpinned.");
-    });
 
     exportBtn.addEventListener("click", exportWorkspace);
 

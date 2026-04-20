@@ -59,11 +59,14 @@
       100% { transform: translateX(100%); }
     }
 
-    /* Ask dotdock widget */
-    #askDotdockPanel { max-height: min(78vh, 760px); }
+    /* Ask dotdock widget (modal style) */
+    #askDotdockOverlay { background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(2px); }
+    #askDotdockPanel { max-height: min(92vh, 900px); }
     #askDotdockMessages::-webkit-scrollbar { width: 10px; }
     #askDotdockMessages::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
     #askDotdockMessages::-webkit-scrollbar-track { background: transparent; }
+    .ask-q-chip { border: 1px solid #d1d5db; border-radius: 12px; padding: 10px 12px; background: #fff; font-size: 14px; text-align: left; }
+    .ask-q-chip:hover { background: #f8fafc; border-color: #93c5fd; }
 
 </style>
 </head>
@@ -427,27 +430,40 @@
     Ask dotdock
   </button>
 
-  <section id="askDotdockPanel"
-           class="hidden fixed bottom-20 right-4 z-[73] w-[min(94vw,520px)] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
-    <div class="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
-      <div class="font-semibold text-gray-900">Ask dotdock</div>
-      <div class="text-[11px] text-gray-500">Repository-only answers</div>
-      <button id="askDotdockClose" class="ml-auto px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50">Close</button>
-    </div>
-
-    <div id="askDotdockMessages" class="px-4 py-3 space-y-3 max-h-[50vh] overflow-auto bg-gray-50">
-      <div class="text-sm text-gray-600">
-        Ask a question. We will use your dotdock repository documents and show references.
+  <section id="askDotdockOverlay" class="hidden fixed inset-0 z-[73] p-4 sm:p-8">
+    <div id="askDotdockPanel"
+           class="mx-auto w-[min(96vw,1180px)] h-[min(92vh,900px)] bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <div class="px-5 py-4 border-b border-gray-200 flex items-center gap-3">
+        <div class="font-semibold text-xl text-gray-900">Ask dotdock</div>
+        <div class="text-xs text-gray-500 uppercase tracking-[0.2em]">beta</div>
+        <button id="askDotdockClose" class="ml-auto w-9 h-9 rounded-full border border-gray-300 hover:bg-gray-50">✕</button>
       </div>
-    </div>
 
-    <div class="px-4 py-3 border-t border-gray-200">
-      <div class="flex gap-2">
-        <input id="askDotdockInput" type="text" class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
-               placeholder="Ask about your repository PDFs…" />
-        <button id="askDotdockSend" class="px-3 py-2 text-sm font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">Send</button>
+      <div id="askDotdockIntro" class="px-6 py-6 border-b border-gray-100 bg-gray-50/70">
+        <div class="text-lg font-semibold text-gray-900">Ask about your repository insights</div>
+        <p class="mt-2 text-sm text-gray-600">Click a sample question or type your own. Answers are grounded in your indexed PDFs.</p>
+        <div id="askSampleQuestions" class="mt-4 grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <button type="button" class="ask-q-chip">How can we start a digital transformation roadmap?</button>
+          <button type="button" class="ask-q-chip">What are top risks in AI adoption for enterprises?</button>
+          <button type="button" class="ask-q-chip">Summarize major trends in cybersecurity governance.</button>
+          <button type="button" class="ask-q-chip">Which reports discuss talent and capability building?</button>
+        </div>
       </div>
-      <div id="askDotdockHint" class="mt-2 text-[11px] text-gray-500"></div>
+
+      <div id="askDotdockMessages" class="px-6 py-4 space-y-4 flex-1 overflow-auto bg-white">
+        <div class="text-sm text-gray-600">
+          Ask a question. We will use your dotdock repository documents and show references.
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-gray-200">
+        <div class="flex gap-2">
+          <input id="askDotdockInput" type="text" class="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm"
+                 placeholder="Ask about your repository PDFs…" />
+          <button id="askDotdockSend" class="px-4 py-3 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">Send</button>
+        </div>
+        <div id="askDotdockHint" class="mt-2 text-[11px] text-gray-500"></div>
+      </div>
     </div>
   </section>
 
@@ -645,6 +661,36 @@
     ? window.DOTDOCK_APP_CONFIG
     : {};
   const DATA_URL = String(APP_CONFIG.dataUrl || "").trim();
+
+  function ddJsonpFetchJson_(url, opts = {}) {
+    const timeoutMs = Number(opts.timeoutMs || 25000) || 25000;
+    const signal = opts.signal || null;
+    return new Promise((resolve, reject) => {
+      const cbName = "__dd_cb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+      const sep = url.includes("?") ? "&" : "?";
+      const script = document.createElement("script");
+      let settled = false;
+
+      const done = (err, data) => {
+        if (settled) return;
+        settled = true;
+        try { delete window[cbName]; } catch (_) {}
+        if (script.parentNode) script.parentNode.removeChild(script);
+        clearTimeout(timer);
+        if (signal && abortHandler) signal.removeEventListener("abort", abortHandler);
+        if (err) reject(err); else resolve(data);
+      };
+
+      const timer = setTimeout(() => done(new Error("JSONP timeout")), timeoutMs);
+      const abortHandler = signal ? () => done(new Error("Request aborted")) : null;
+      if (signal) signal.addEventListener("abort", abortHandler, { once: true });
+
+      window[cbName] = (data) => done(null, data);
+      script.onerror = () => done(new Error("JSONP load failed"));
+      script.src = url + sep + "callback=" + encodeURIComponent(cbName);
+      document.head.appendChild(script);
+    });
+  }
 
   // Feature flags (safe toggles)
 
@@ -1207,10 +1253,7 @@ function commentsCountsCacheSet_(countsObj) {
     const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
     const url = base + "action=likes_get&device=" + encodeURIComponent(getDeviceId_()) + "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("likes_get failed: " + res.status);
-
-    const data = await res.json();
+    const data = await ddJsonpFetchJson_(url, { timeoutMs: 15000 });
     if (!data || data.ok !== true) throw new Error("likes_get returned invalid payload");
 
     REMOTE_LIKES_READY = true;
@@ -1232,10 +1275,7 @@ function commentsCountsCacheSet_(countsObj) {
       "&device=" + encodeURIComponent(getDeviceId_()) +
       "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("like_toggle failed: " + res.status);
-
-    const out = await res.json();
+    const out = await ddJsonpFetchJson_(url, { timeoutMs: 15000 });
     if (!out || out.ok !== true) throw new Error(out?.error || "like_toggle returned invalid payload");
 
     REMOTE_LIKES_READY = true;
@@ -1265,9 +1305,7 @@ function commentsCountsCacheSet_(countsObj) {
   // 2) Always fetch fresh counts (but only once per call)
   const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
   const url = base + "action=comments_counts&cb=" + Date.now();
-  const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-  if (!res.ok) throw new Error("comments_counts failed: " + res.status);
-  const data = await res.json();
+  const data = await ddJsonpFetchJson_(url, { timeoutMs: 15000 });
   if (!data || data.ok !== true) throw new Error("comments_counts returned invalid payload");
 
   const countsObj = (data.counts && typeof data.counts === "object") ? data.counts : {};
@@ -1284,9 +1322,7 @@ function commentsCountsCacheSet_(countsObj) {
       "&offset=" + encodeURIComponent(String(offset)) +
       "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("comments_get failed: " + res.status);
-    const data = await res.json();
+    const data = await ddJsonpFetchJson_(url, { timeoutMs: 15000 });
     if (!data || data.ok !== true) throw new Error(data?.error || "comments_get returned invalid payload");
     return data;
   }
@@ -1300,9 +1336,7 @@ function commentsCountsCacheSet_(countsObj) {
       "&text=" + encodeURIComponent(text || "") +
       "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("comment_add failed: " + res.status);
-    const data = await res.json();
+    const data = await ddJsonpFetchJson_(url, { timeoutMs: 15000 });
     if (!data || data.ok !== true) throw new Error(data?.error || "comment_add returned invalid payload");
     // update count cache
     const c = Number(data.count || 0) || 0;
@@ -1318,9 +1352,7 @@ function commentsCountsCacheSet_(countsObj) {
       "&limit=" + encodeURIComponent(String(limit)) +
       "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit", signal });
-    if (!res.ok) throw new Error("search_pdf failed: " + res.status);
-    const data = await res.json();
+    const data = await ddJsonpFetchJson_(url, { timeoutMs: 25000, signal });
     if (!data || data.ok !== true) throw new Error(data?.error || "search_pdf returned invalid payload");
     return Array.isArray(data.ids) ? data.ids.map(String) : [];
   }
@@ -1389,9 +1421,7 @@ function commentsCountsCacheSet_(countsObj) {
       "&candidates=" + encodeURIComponent((candidateIds || []).map(String).join(",")) +
       "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("ai_search failed: " + res.status);
-    const data = await res.json();
+    const data = await ddJsonpFetchJson_(url, { timeoutMs: 25000 });
     if (!data) throw new Error("ai_search returned empty payload");
     return data;
   }
@@ -1575,31 +1605,15 @@ Output:
       if (cached) return cached;
     }
     const url = forceFresh ? withCb_(DATA_URL) : DATA_URL;
-    const ac = new AbortController();
     const timeoutMs = forceFresh ? 35000 : 25000;
-    const timer = setTimeout(() => ac.abort(), timeoutMs);
-    let res;
-    try {
-      res = await fetch(url, {
-        cache: forceFresh ? "no-store" : "default",
-        mode: "cors",
-        credentials: "omit",
-        signal: ac.signal
-      });
-    } catch (e) {
-      if (ac.signal.aborted) {
-        const err = new Error("Catalog request timed out.");
-        err.code = "TIMEOUT";
-        throw err;
-      }
-      throw e;
-    } finally {
-      clearTimeout(timer);
-    }
-    if (!res.ok) throw new Error("Failed to load catalog (" + res.status + ")");
-    const text = await res.text();
     let json;
-    try { json = JSON.parse(text); } catch { throw new Error("Catalog returned non-JSON content."); }
+    try {
+      json = await ddJsonpFetchJson_(url, { timeoutMs: timeoutMs });
+    } catch (e) {
+      const err = new Error("Catalog request failed.");
+      err.code = "FETCH_FAIL";
+      throw err;
+    }
     if (!Array.isArray(json)) throw new Error("Catalog JSON format unexpected.");
     return json;
   }
@@ -3092,14 +3106,12 @@ function setupNewPostsBtn_() {
       q: String(q || ""),
       references: refs.map(r => ({ id: r.id, title: r.title, summary: r.summary }))
     };
-
-    const res = await fetch(askApiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error("ask-dotdock backend failed: " + res.status);
-    return await res.json();
+    const sep = askApiUrl.includes("?") ? "&" : "?";
+    const url = askApiUrl + sep +
+      "action=ask_dotdock" +
+      "&q=" + encodeURIComponent(payload.q) +
+      "&references=" + encodeURIComponent(JSON.stringify(payload.references));
+    return await ddJsonpFetchJson_(url, { timeoutMs: 30000 });
   }
 
   function askRenderResponse_(q, answer, refs) {
@@ -3134,7 +3146,6 @@ function setupNewPostsBtn_() {
     `;
 
     wrap.insertAdjacentHTML("beforeend", userHtml + botHtml);
-    wrap.scrollTop = wrap.scrollHeight;
   }
 
 
@@ -3309,11 +3320,14 @@ function setupNewPostsBtn_() {
     const stickyBtn = document.getElementById("stickySearchBtn");
     const stickyClearBtn = document.getElementById("stickySearchClearBtn");
     const askFab = document.getElementById("askDotdockFab");
+    const askOverlay = document.getElementById("askDotdockOverlay");
     const askPanel = document.getElementById("askDotdockPanel");
     const askClose = document.getElementById("askDotdockClose");
     const askSend = document.getElementById("askDotdockSend");
     const askInput = document.getElementById("askDotdockInput");
     const askHint = document.getElementById("askDotdockHint");
+    const askIntro = document.getElementById("askDotdockIntro");
+    const askSampleQuestions = document.getElementById("askSampleQuestions");
 
     // Sidebar toggle (desktop)
     const sidebar = document.getElementById("sidebar");
@@ -4491,19 +4505,25 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
         closeSummaryModal();
         helpDd.classList.add("hidden");
         closeCompareModalAndClear();
+        if (askOverlay) askOverlay.classList.add("hidden");
       }
     });
 
 
     // Ask dotdock interactions
-    if (askFab && askPanel) {
+    if (askFab && askOverlay) {
       askFab.addEventListener("click", () => {
-        askPanel.classList.toggle("hidden");
-        if (!askPanel.classList.contains("hidden") && askInput) askInput.focus();
+        askOverlay.classList.remove("hidden");
+        if (askInput) askInput.focus();
       });
     }
-    if (askClose && askPanel) {
-      askClose.addEventListener("click", () => askPanel.classList.add("hidden"));
+    if (askClose && askOverlay) {
+      askClose.addEventListener("click", () => askOverlay.classList.add("hidden"));
+    }
+    if (askOverlay && askPanel) {
+      askOverlay.addEventListener("click", (ev) => {
+        if (ev.target === askOverlay) askOverlay.classList.add("hidden");
+      });
     }
 
     async function askSubmit_() {
@@ -4511,6 +4531,7 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
       if (!q) return;
       if (askSend) askSend.disabled = true;
       if (askHint) askHint.textContent = "Searching repository…";
+      if (askIntro) askIntro.classList.add("hidden");
       try {
         const refs = askBuildReferences_(q, state.allItems || [], 5);
         let answer = "";
@@ -4533,6 +4554,15 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
       } finally {
         if (askSend) askSend.disabled = false;
       }
+    }
+
+    if (askSampleQuestions && askInput) {
+      askSampleQuestions.addEventListener("click", (ev) => {
+        const btn = ev.target.closest(".ask-q-chip");
+        if (!btn) return;
+        askInput.value = String(btn.textContent || "").trim();
+        askSubmit_();
+      });
     }
 
     if (askSend) askSend.addEventListener("click", askSubmit_);

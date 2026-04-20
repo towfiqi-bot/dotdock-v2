@@ -59,11 +59,14 @@
       100% { transform: translateX(100%); }
     }
 
-    /* Ask dotdock widget */
-    #askDotdockPanel { max-height: min(78vh, 760px); }
+    /* Ask dotdock widget (modal style) */
+    #askDotdockOverlay { background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(2px); }
+    #askDotdockPanel { max-height: min(92vh, 900px); }
     #askDotdockMessages::-webkit-scrollbar { width: 10px; }
     #askDotdockMessages::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
     #askDotdockMessages::-webkit-scrollbar-track { background: transparent; }
+    .ask-q-chip { border: 1px solid #d1d5db; border-radius: 12px; padding: 10px 12px; background: #fff; font-size: 14px; text-align: left; }
+    .ask-q-chip:hover { background: #f8fafc; border-color: #93c5fd; }
 
 </style>
 </head>
@@ -427,27 +430,40 @@
     Ask dotdock
   </button>
 
-  <section id="askDotdockPanel"
-           class="hidden fixed bottom-20 right-4 z-[73] w-[min(94vw,520px)] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
-    <div class="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
-      <div class="font-semibold text-gray-900">Ask dotdock</div>
-      <div class="text-[11px] text-gray-500">Repository-only answers</div>
-      <button id="askDotdockClose" class="ml-auto px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50">Close</button>
-    </div>
-
-    <div id="askDotdockMessages" class="px-4 py-3 space-y-3 max-h-[50vh] overflow-auto bg-gray-50">
-      <div class="text-sm text-gray-600">
-        Ask a question. We will use your dotdock repository documents and show references.
+  <section id="askDotdockOverlay" class="hidden fixed inset-0 z-[73] p-4 sm:p-8">
+    <div id="askDotdockPanel"
+           class="mx-auto w-[min(96vw,1180px)] h-[min(92vh,900px)] bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <div class="px-5 py-4 border-b border-gray-200 flex items-center gap-3">
+        <div class="font-semibold text-xl text-gray-900">Ask dotdock</div>
+        <div class="text-xs text-gray-500 uppercase tracking-[0.2em]">beta</div>
+        <button id="askDotdockClose" class="ml-auto w-9 h-9 rounded-full border border-gray-300 hover:bg-gray-50">✕</button>
       </div>
-    </div>
 
-    <div class="px-4 py-3 border-t border-gray-200">
-      <div class="flex gap-2">
-        <input id="askDotdockInput" type="text" class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
-               placeholder="Ask about your repository PDFs…" />
-        <button id="askDotdockSend" class="px-3 py-2 text-sm font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">Send</button>
+      <div id="askDotdockIntro" class="px-6 py-6 border-b border-gray-100 bg-gray-50/70">
+        <div class="text-lg font-semibold text-gray-900">Ask about your repository insights</div>
+        <p class="mt-2 text-sm text-gray-600">Click a sample question or type your own. Answers are grounded in your indexed PDFs.</p>
+        <div id="askSampleQuestions" class="mt-4 grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <button type="button" class="ask-q-chip">How can we start a digital transformation roadmap?</button>
+          <button type="button" class="ask-q-chip">What are top risks in AI adoption for enterprises?</button>
+          <button type="button" class="ask-q-chip">Summarize major trends in cybersecurity governance.</button>
+          <button type="button" class="ask-q-chip">Which reports discuss talent and capability building?</button>
+        </div>
       </div>
-      <div id="askDotdockHint" class="mt-2 text-[11px] text-gray-500"></div>
+
+      <div id="askDotdockMessages" class="px-6 py-4 space-y-4 flex-1 overflow-auto bg-white">
+        <div class="text-sm text-gray-600">
+          Ask a question. We will use your dotdock repository documents and show references.
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-gray-200">
+        <div class="flex gap-2">
+          <input id="askDotdockInput" type="text" class="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm"
+                 placeholder="Ask about your repository PDFs…" />
+          <button id="askDotdockSend" class="px-4 py-3 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">Send</button>
+        </div>
+        <div id="askDotdockHint" class="mt-2 text-[11px] text-gray-500"></div>
+      </div>
     </div>
   </section>
 
@@ -3130,7 +3146,6 @@ function setupNewPostsBtn_() {
     `;
 
     wrap.insertAdjacentHTML("beforeend", userHtml + botHtml);
-    wrap.scrollTop = wrap.scrollHeight;
   }
 
 
@@ -3305,11 +3320,14 @@ function setupNewPostsBtn_() {
     const stickyBtn = document.getElementById("stickySearchBtn");
     const stickyClearBtn = document.getElementById("stickySearchClearBtn");
     const askFab = document.getElementById("askDotdockFab");
+    const askOverlay = document.getElementById("askDotdockOverlay");
     const askPanel = document.getElementById("askDotdockPanel");
     const askClose = document.getElementById("askDotdockClose");
     const askSend = document.getElementById("askDotdockSend");
     const askInput = document.getElementById("askDotdockInput");
     const askHint = document.getElementById("askDotdockHint");
+    const askIntro = document.getElementById("askDotdockIntro");
+    const askSampleQuestions = document.getElementById("askSampleQuestions");
 
     // Sidebar toggle (desktop)
     const sidebar = document.getElementById("sidebar");
@@ -4487,19 +4505,25 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
         closeSummaryModal();
         helpDd.classList.add("hidden");
         closeCompareModalAndClear();
+        if (askOverlay) askOverlay.classList.add("hidden");
       }
     });
 
 
     // Ask dotdock interactions
-    if (askFab && askPanel) {
+    if (askFab && askOverlay) {
       askFab.addEventListener("click", () => {
-        askPanel.classList.toggle("hidden");
-        if (!askPanel.classList.contains("hidden") && askInput) askInput.focus();
+        askOverlay.classList.remove("hidden");
+        if (askInput) askInput.focus();
       });
     }
-    if (askClose && askPanel) {
-      askClose.addEventListener("click", () => askPanel.classList.add("hidden"));
+    if (askClose && askOverlay) {
+      askClose.addEventListener("click", () => askOverlay.classList.add("hidden"));
+    }
+    if (askOverlay && askPanel) {
+      askOverlay.addEventListener("click", (ev) => {
+        if (ev.target === askOverlay) askOverlay.classList.add("hidden");
+      });
     }
 
     async function askSubmit_() {
@@ -4507,6 +4531,7 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
       if (!q) return;
       if (askSend) askSend.disabled = true;
       if (askHint) askHint.textContent = "Searching repository…";
+      if (askIntro) askIntro.classList.add("hidden");
       try {
         const refs = askBuildReferences_(q, state.allItems || [], 5);
         let answer = "";
@@ -4529,6 +4554,15 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
       } finally {
         if (askSend) askSend.disabled = false;
       }
+    }
+
+    if (askSampleQuestions && askInput) {
+      askSampleQuestions.addEventListener("click", (ev) => {
+        const btn = ev.target.closest(".ask-q-chip");
+        if (!btn) return;
+        askInput.value = String(btn.textContent || "").trim();
+        askSubmit_();
+      });
     }
 
     if (askSend) askSend.addEventListener("click", askSubmit_);

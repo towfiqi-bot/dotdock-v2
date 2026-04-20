@@ -3056,11 +3056,14 @@ function setupNewPostsBtn_() {
 
 
   // --------- Ask dotdock ----------
+  const ASK_REFS_PAGE_SIZE = 12;
+  const askSessionMap_ = new Map();
+
   function askTokenize_(s) {
     return normalizeText(s).split(/\s+/g).filter(Boolean);
   }
 
-  function askBuildReferences_(q, items, limit = 12) {
+  function askBuildReferencePool_(q, items) {
     const qTokens = askTokenize_(q);
     if (!qTokens.length) return [];
 
@@ -3074,8 +3077,7 @@ function setupNewPostsBtn_() {
       return { it, score };
     })
       .filter(x => x.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
+      .sort((a, b) => b.score - a.score);
 
     return scored.map(({ it }) => ({
       id: String(it.id || ""),
@@ -3148,7 +3150,7 @@ function setupNewPostsBtn_() {
     return pendingId;
   }
 
-  function askRenderResponse_(pendingId, answer, refs, searchedCount) {
+  function askRenderResponse_(pendingId, answer, refs, searchedCount, totalMatches) {
     const pending = document.getElementById(pendingId);
     if (!pending) return;
 
@@ -3163,11 +3165,14 @@ function setupNewPostsBtn_() {
 
     const botHtml = `
       <div class="font-semibold mb-1">Ask dotdock</div>
-      <div class="text-xs text-gray-500 mb-2">Scanned ${Number(searchedCount || 0)} reports • showing top ${refs.length} references</div>
+      <div class="text-xs text-gray-500 mb-2">Scanned ${Number(searchedCount || 0)} reports • showing ${refs.length} of ${Number(totalMatches || refs.length)} matched references</div>
       <div class="whitespace-pre-wrap leading-relaxed">${escapeHtml(answer)}</div>
       <div class="mt-3">
         <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">References</div>
         <div class="space-y-2">${refsHtml || "<div class='text-xs text-gray-500'>No references found.</div>"}</div>
+        ${Number(totalMatches || 0) > refs.length ? `
+          <button type="button" data-ask-more-id="${escapeHtml(pendingId)}" class="mt-2 text-sm font-semibold text-blue-700 hover:underline">More references…</button>
+        ` : ""}
       </div>
     `;
 
@@ -3352,6 +3357,7 @@ function setupNewPostsBtn_() {
     const askSend = document.getElementById("askDotdockSend");
     const askInput = document.getElementById("askDotdockInput");
     const askHint = document.getElementById("askDotdockHint");
+    const askMessages = document.getElementById("askDotdockMessages");
     const askIntro = document.getElementById("askDotdockIntro");
     const askSampleQuestions = document.getElementById("askSampleQuestions");
 
@@ -4560,7 +4566,8 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
       if (askIntro) askIntro.classList.add("hidden");
       try {
         const totalScanned = Array.isArray(state.allItems) ? state.allItems.length : 0;
-        const refs = askBuildReferences_(q, state.allItems || [], 12);
+        const pool = askBuildReferencePool_(q, state.allItems || []);
+        const refs = pool.slice(0, ASK_REFS_PAGE_SIZE);
         const pendingId = askRenderThinking_(q, refs, totalScanned);
         let answer = "";
         try {
@@ -4571,12 +4578,18 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
         } catch {
           answer = askFallbackAnswer_(q, refs);
         }
-        askRenderResponse_(pendingId, answer, refs, totalScanned);
+        askSessionMap_.set(pendingId, {
+          answer: answer,
+          searchedCount: totalScanned,
+          pool: pool,
+          shown: refs.length
+        });
+        askRenderResponse_(pendingId, answer, refs, totalScanned, pool.length);
         if (askInput) askInput.value = "";
         if (askHint) {
           const askApiUrl = String(APP_CONFIG.askApiUrl || "").trim();
           askHint.textContent = askApiUrl
-            ? ("Answer generated. Searched " + totalScanned + " reports; showing top " + refs.length + " references.")
+            ? ("Answer generated. Searched " + totalScanned + " reports; showing " + refs.length + " of " + pool.length + " matched references.")
             : "Ask backend not configured yet. Showing repository-grounded fallback answer.";
         }
       } finally {
@@ -4590,6 +4603,19 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
         if (!btn) return;
         askInput.value = String(btn.textContent || "").trim();
         askSubmit_();
+      });
+    }
+    if (askMessages) {
+      askMessages.addEventListener("click", (ev) => {
+        const btn = ev.target.closest("[data-ask-more-id]");
+        if (!btn) return;
+        const id = String(btn.getAttribute("data-ask-more-id") || "");
+        const session = askSessionMap_.get(id);
+        if (!session) return;
+        session.shown = Math.min(session.pool.length, session.shown + ASK_REFS_PAGE_SIZE);
+        const refs = session.pool.slice(0, session.shown);
+        askSessionMap_.set(id, session);
+        askRenderResponse_(id, session.answer, refs, session.searchedCount, session.pool.length);
       });
     }
 

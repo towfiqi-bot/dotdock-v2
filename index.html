@@ -646,6 +646,36 @@
     : {};
   const DATA_URL = String(APP_CONFIG.dataUrl || "").trim();
 
+  function ddJsonpFetchJson_(url, opts = {}) {
+    const timeoutMs = Number(opts.timeoutMs || 25000) || 25000;
+    const signal = opts.signal || null;
+    return new Promise((resolve, reject) => {
+      const cbName = "__dd_cb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+      const sep = url.includes("?") ? "&" : "?";
+      const script = document.createElement("script");
+      let settled = false;
+
+      const done = (err, data) => {
+        if (settled) return;
+        settled = true;
+        try { delete window[cbName]; } catch (_) {}
+        if (script.parentNode) script.parentNode.removeChild(script);
+        clearTimeout(timer);
+        if (signal && abortHandler) signal.removeEventListener("abort", abortHandler);
+        if (err) reject(err); else resolve(data);
+      };
+
+      const timer = setTimeout(() => done(new Error("JSONP timeout")), timeoutMs);
+      const abortHandler = signal ? () => done(new Error("Request aborted")) : null;
+      if (signal) signal.addEventListener("abort", abortHandler, { once: true });
+
+      window[cbName] = (data) => done(null, data);
+      script.onerror = () => done(new Error("JSONP load failed"));
+      script.src = url + sep + "callback=" + encodeURIComponent(cbName);
+      document.head.appendChild(script);
+    });
+  }
+
   // Feature flags (safe toggles)
 
   if (!DATA_URL) {
@@ -1207,10 +1237,7 @@ function commentsCountsCacheSet_(countsObj) {
     const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
     const url = base + "action=likes_get&device=" + encodeURIComponent(getDeviceId_()) + "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("likes_get failed: " + res.status);
-
-    const data = await res.json();
+    const data = await ddJsonpFetchJson_(url, { timeoutMs: 15000 });
     if (!data || data.ok !== true) throw new Error("likes_get returned invalid payload");
 
     REMOTE_LIKES_READY = true;
@@ -1232,10 +1259,7 @@ function commentsCountsCacheSet_(countsObj) {
       "&device=" + encodeURIComponent(getDeviceId_()) +
       "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("like_toggle failed: " + res.status);
-
-    const out = await res.json();
+    const out = await ddJsonpFetchJson_(url, { timeoutMs: 15000 });
     if (!out || out.ok !== true) throw new Error(out?.error || "like_toggle returned invalid payload");
 
     REMOTE_LIKES_READY = true;
@@ -1265,9 +1289,7 @@ function commentsCountsCacheSet_(countsObj) {
   // 2) Always fetch fresh counts (but only once per call)
   const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
   const url = base + "action=comments_counts&cb=" + Date.now();
-  const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-  if (!res.ok) throw new Error("comments_counts failed: " + res.status);
-  const data = await res.json();
+  const data = await ddJsonpFetchJson_(url, { timeoutMs: 15000 });
   if (!data || data.ok !== true) throw new Error("comments_counts returned invalid payload");
 
   const countsObj = (data.counts && typeof data.counts === "object") ? data.counts : {};
@@ -1284,9 +1306,7 @@ function commentsCountsCacheSet_(countsObj) {
       "&offset=" + encodeURIComponent(String(offset)) +
       "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("comments_get failed: " + res.status);
-    const data = await res.json();
+    const data = await ddJsonpFetchJson_(url, { timeoutMs: 15000 });
     if (!data || data.ok !== true) throw new Error(data?.error || "comments_get returned invalid payload");
     return data;
   }
@@ -1300,9 +1320,7 @@ function commentsCountsCacheSet_(countsObj) {
       "&text=" + encodeURIComponent(text || "") +
       "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("comment_add failed: " + res.status);
-    const data = await res.json();
+    const data = await ddJsonpFetchJson_(url, { timeoutMs: 15000 });
     if (!data || data.ok !== true) throw new Error(data?.error || "comment_add returned invalid payload");
     // update count cache
     const c = Number(data.count || 0) || 0;
@@ -1318,9 +1336,7 @@ function commentsCountsCacheSet_(countsObj) {
       "&limit=" + encodeURIComponent(String(limit)) +
       "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit", signal });
-    if (!res.ok) throw new Error("search_pdf failed: " + res.status);
-    const data = await res.json();
+    const data = await ddJsonpFetchJson_(url, { timeoutMs: 25000, signal });
     if (!data || data.ok !== true) throw new Error(data?.error || "search_pdf returned invalid payload");
     return Array.isArray(data.ids) ? data.ids.map(String) : [];
   }
@@ -1389,9 +1405,7 @@ function commentsCountsCacheSet_(countsObj) {
       "&candidates=" + encodeURIComponent((candidateIds || []).map(String).join(",")) +
       "&cb=" + Date.now();
 
-    const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("ai_search failed: " + res.status);
-    const data = await res.json();
+    const data = await ddJsonpFetchJson_(url, { timeoutMs: 25000 });
     if (!data) throw new Error("ai_search returned empty payload");
     return data;
   }
@@ -1575,31 +1589,15 @@ Output:
       if (cached) return cached;
     }
     const url = forceFresh ? withCb_(DATA_URL) : DATA_URL;
-    const ac = new AbortController();
     const timeoutMs = forceFresh ? 35000 : 25000;
-    const timer = setTimeout(() => ac.abort(), timeoutMs);
-    let res;
-    try {
-      res = await fetch(url, {
-        cache: forceFresh ? "no-store" : "default",
-        mode: "cors",
-        credentials: "omit",
-        signal: ac.signal
-      });
-    } catch (e) {
-      if (ac.signal.aborted) {
-        const err = new Error("Catalog request timed out.");
-        err.code = "TIMEOUT";
-        throw err;
-      }
-      throw e;
-    } finally {
-      clearTimeout(timer);
-    }
-    if (!res.ok) throw new Error("Failed to load catalog (" + res.status + ")");
-    const text = await res.text();
     let json;
-    try { json = JSON.parse(text); } catch { throw new Error("Catalog returned non-JSON content."); }
+    try {
+      json = await ddJsonpFetchJson_(url, { timeoutMs: timeoutMs });
+    } catch (e) {
+      const err = new Error("Catalog request failed.");
+      err.code = "FETCH_FAIL";
+      throw err;
+    }
     if (!Array.isArray(json)) throw new Error("Catalog JSON format unexpected.");
     return json;
   }
@@ -3092,14 +3090,12 @@ function setupNewPostsBtn_() {
       q: String(q || ""),
       references: refs.map(r => ({ id: r.id, title: r.title, summary: r.summary }))
     };
-
-    const res = await fetch(askApiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error("ask-dotdock backend failed: " + res.status);
-    return await res.json();
+    const sep = askApiUrl.includes("?") ? "&" : "?";
+    const url = askApiUrl + sep +
+      "action=ask_dotdock" +
+      "&q=" + encodeURIComponent(payload.q) +
+      "&references=" + encodeURIComponent(JSON.stringify(payload.references));
+    return await ddJsonpFetchJson_(url, { timeoutMs: 30000 });
   }
 
   function askRenderResponse_(q, answer, refs) {

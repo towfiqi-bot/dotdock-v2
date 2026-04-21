@@ -967,6 +967,20 @@
     document.body.classList.add("modal-open");
   }
 
+  function requireAuthForAction_(action, guardedActions = null) {
+    if (action === "auth_open") {
+      openAuthModal_();
+      return false;
+    }
+    const needsAuth = Array.isArray(guardedActions)
+      ? guardedActions.includes(action)
+      : true;
+    if (!needsAuth) return true;
+    if (state.authUser) return true;
+    openAuthModal_();
+    return false;
+  }
+
   function closeAuthModal_() {
     const modal = document.getElementById("authModal");
     if (!modal) return;
@@ -4311,16 +4325,7 @@ document.addEventListener("visibilitychange", () => {
       const action = btn.getAttribute("data-action");
       const id = btn.getAttribute("data-id");
       if (!id) return;
-      const authLocked = !state.authUser;
-
-      if (action === "auth_open") {
-        openAuthModal_();
-        return;
-      }
-      if (authLocked) {
-        openAuthModal_();
-        return;
-      }
+      if (!requireAuthForAction_(action)) return;
 
       const item = state.allItems.find(x => String(x.id) === String(id));
 
@@ -4412,6 +4417,7 @@ document.addEventListener("visibilitychange", () => {
       const action = btn.getAttribute("data-action");
       const id = btn.getAttribute("data-id");
       if (!id) return;
+      if (!requireAuthForAction_(action, ["modal", "compare"])) return;
       if (action === "modal") openPdfModalById(id);
       if (action === "reading") toggleReadingItem(id);
       if (action === "compare") toggleCompare(id);
@@ -4422,7 +4428,9 @@ document.addEventListener("visibilitychange", () => {
       const btn = e.target.closest("[data-action='compare']");
       if (!btn) return;
       const id = btn.getAttribute("data-id");
-      if (id) toggleCompare(id);
+      if (!id) return;
+      if (!requireAuthForAction_("compare", ["compare"])) return;
+      toggleCompare(id);
     });
 
     // Instant-load cached data on Home to improve first paint.

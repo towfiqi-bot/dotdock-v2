@@ -67,6 +67,32 @@
     #askDotdockMessages::-webkit-scrollbar-track { background: transparent; }
     .ask-q-chip { border: 1px solid #d1d5db; border-radius: 12px; padding: 10px 12px; background: #fff; font-size: 14px; text-align: left; }
     .ask-q-chip:hover { background: #f8fafc; border-color: #93c5fd; }
+    .ask-fab {
+      position: fixed; z-index: 72;
+      right: max(12px, env(safe-area-inset-right));
+      bottom: max(12px, env(safe-area-inset-bottom));
+      border-radius: 16px;
+      padding: 10px 14px;
+      color: #fff;
+      background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #0ea5e9 100%);
+      box-shadow: 0 12px 26px rgba(29, 78, 216, 0.35);
+      border: 1px solid rgba(255,255,255,0.22);
+      display: flex; align-items: center; gap: 10px;
+      max-width: 220px;
+    }
+    .ask-fab .ask-fab-icon {
+      width: 30px; height: 30px; border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 16px; line-height: 1;
+    }
+    .ask-fab .ask-fab-title { font-size: 24px; font-weight: 700; line-height: 1; }
+    .ask-fab .ask-fab-sub { font-size: 11px; opacity: .9; letter-spacing: .04em; text-transform: uppercase; }
+    @media (max-width: 768px) {
+      .ask-fab { padding: 8px 12px; border-radius: 14px; right: 10px; bottom: 10px; max-width: 180px; }
+      .ask-fab .ask-fab-title { font-size: 22px; }
+      .ask-fab .ask-fab-sub { display: none; }
+    }
 
 </style>
 </head>
@@ -425,9 +451,12 @@
   </button>
 
   <!-- Ask dotdock -->
-  <button id="askDotdockFab"
-          class="fixed bottom-4 right-20 z-[72] px-4 py-2 rounded-full shadow-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
-    Ask dotdock
+  <button id="askDotdockFab" class="ask-fab" aria-label="Open Ask dotdock">
+    <span class="ask-fab-icon">💬</span>
+    <span>
+      <span class="block ask-fab-title">Ask dotdock</span>
+      <span class="block ask-fab-sub">AI chatbot (beta)</span>
+    </span>
   </button>
 
   <section id="askDotdockOverlay" class="hidden fixed inset-0 z-[73] p-4 sm:p-8">
@@ -448,6 +477,13 @@
           <button type="button" class="ask-q-chip">Summarize major trends in cybersecurity governance.</button>
           <button type="button" class="ask-q-chip">Which reports discuss talent and capability building?</button>
         </div>
+      </div>
+
+      <div id="askBusyBanner" class="hidden mx-6 mt-4 mb-0 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 text-sm px-3 py-2">
+        <span class="inline-flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+          <span id="askBusyText">Working on your answer…</span>
+        </span>
       </div>
 
       <div id="askDotdockMessages" class="px-6 py-4 space-y-4 flex-1 overflow-auto bg-white">
@@ -3420,6 +3456,8 @@ function setupNewPostsBtn_() {
     const askInput = document.getElementById("askDotdockInput");
     const askHint = document.getElementById("askDotdockHint");
     const askMessages = document.getElementById("askDotdockMessages");
+    const askBusyBanner = document.getElementById("askBusyBanner");
+    const askBusyText = document.getElementById("askBusyText");
     const askIntro = document.getElementById("askDotdockIntro");
     const askSampleQuestions = document.getElementById("askSampleQuestions");
 
@@ -4637,8 +4675,14 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
         openAuthModal_();
         return;
       }
-      if (askSend) askSend.disabled = true;
+      const prevSendLabel = askSend ? askSend.textContent : "";
+      if (askSend) {
+        askSend.disabled = true;
+        askSend.textContent = "Thinking…";
+      }
       if (askHint) askHint.textContent = "Searching repository…";
+      if (askBusyBanner) askBusyBanner.classList.remove("hidden");
+      if (askBusyText) askBusyText.textContent = "Searching repository and ranking references…";
       if (askIntro) askIntro.classList.add("hidden");
       try {
         const totalScanned = Array.isArray(state.allItems) ? state.allItems.length : 0;
@@ -4664,6 +4708,7 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
           shown: refs.length
         });
         askRenderResponse_(pendingId, answer, refs, totalScanned, pool.length);
+        if (askBusyText) askBusyText.textContent = "Answer ready.";
         if (askInput) askInput.value = "";
         if (askHint) {
           const askApiUrl = String(APP_CONFIG.askApiUrl || "").trim();
@@ -4672,7 +4717,13 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
             : "Ask backend not configured yet. Showing repository-grounded fallback answer.";
         }
       } finally {
-        if (askSend) askSend.disabled = false;
+        if (askSend) {
+          askSend.disabled = false;
+          askSend.textContent = prevSendLabel || "Send";
+        }
+        if (askBusyBanner) {
+          setTimeout(() => askBusyBanner.classList.add("hidden"), 900);
+        }
       }
     }
 

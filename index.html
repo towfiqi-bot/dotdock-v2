@@ -1618,6 +1618,32 @@ Output:
     return json;
   }
 
+  function tryCatalogSelfHealOnce_(reason) {
+    const flagKey = "dotdock_catalog_selfheal_once_v1";
+    try {
+      if (sessionStorage.getItem(flagKey) === "1") return false;
+      sessionStorage.setItem(flagKey, "1");
+    } catch (_) {
+      return false;
+    }
+
+    try {
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(COMMENTS_COUNTS_CACHE_KEY);
+      localStorage.removeItem(LAST_SEEN_MAX_MOD_KEY);
+    } catch (_) {}
+
+    try {
+      const u = new URL(location.href);
+      u.searchParams.set("cache_fix", String(Date.now()));
+      if (reason) u.searchParams.set("reason", String(reason).slice(0, 40));
+      location.replace(u.toString());
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // Prepare items for fast search/filter
   function prepareItems(items) {
     for (const it of items) {
@@ -4501,6 +4527,11 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
           }
         } else {
           state.catalogLoading = false;
+          const healed = tryCatalogSelfHealOnce_("catalog_fail");
+          if (healed) {
+            infoEl.textContent = "Refreshing cached assets…";
+            return;
+          }
           infoEl.textContent = "Error loading data: " + e.message;
         }
       }

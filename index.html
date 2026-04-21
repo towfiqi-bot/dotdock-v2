@@ -3092,26 +3092,62 @@ function setupNewPostsBtn_() {
   function askBuildReferencePool_(q, items) {
     const qTokens = askTokenize_(q);
     if (!qTokens.length) return [];
+    const qNorm = normalizeText(q);
 
     const scored = (items || []).map((it) => {
-      const hay = normalizeText((it.title || "") + " " + (it.summary || ""));
+      const title = normalizeText(it.title || "");
+      const summary = normalizeText(it.summary || "");
+      const cats = normalizeText(Array.isArray(it.categories) ? it.categories.join(" ") : "");
+      const hay = title + " " + summary + " " + cats;
       let score = 0;
       for (const tok of qTokens) {
         if (tok.length < 2) continue;
+        if (title.includes(tok)) score += 6;
+        if (summary.includes(tok)) score += 3;
+        if (cats.includes(tok)) score += 2;
         if (hay.includes(tok)) score += 1;
       }
+      if (qNorm && title.includes(qNorm)) score += 15;
+      if (qNorm && summary.includes(qNorm)) score += 10;
       return { it, score };
     })
-      .filter(x => x.score > 0)
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => b.score - a.score || (Number(b.it.modified || 0) - Number(a.it.modified || 0)));
 
-    return scored.map(({ it }) => ({
+    let pool = scored.filter(x => x.score > 0).map(({ it }) => ({
       id: String(it.id || ""),
       title: String(it.title || "Untitled"),
       summary: String(it.summary || ""),
       thumbUrl: String(it.thumbUrl || ""),
       href: reportPageUrl(it.id, it.title || "")
     }));
+
+    // If no lexical hits, fallback to newest docs so Ask can still rerank and respond.
+    if (!pool.length) {
+      pool = scored.slice(0, 80).map(({ it }) => ({
+        id: String(it.id || ""),
+        title: String(it.title || "Untitled"),
+        summary: String(it.summary || ""),
+        thumbUrl: String(it.thumbUrl || ""),
+        href: reportPageUrl(it.id, it.title || "")
+      }));
+    }
+    return pool;
+  }
+
+  async function askRerankPoolByAi_(q, pool, limit = ASK_REFS_PAGE_SIZE) {
+    try {
+      const candidateIds = (pool || []).map(x => String(x.id || "")).filter(Boolean).slice(0, 80);
+      if (!candidateIds.length) return (pool || []).slice(0, limit);
+      const out = await remoteAiSearchIds_(q, candidateIds, Math.min(40, Math.max(20, limit * 2)));
+      const ids = Array.isArray(out && out.ids) ? out.ids.map(String) : [];
+      if (!ids.length) return (pool || []).slice(0, limit);
+      const byId = new Map((pool || []).map(x => [String(x.id), x]));
+      const ranked = ids.map(id => byId.get(id)).filter(Boolean);
+      const rest = (pool || []).filter(x => !ids.includes(String(x.id)));
+      return ranked.concat(rest).slice(0, Math.max(limit, ASK_REFS_PAGE_SIZE));
+    } catch (_) {
+      return (pool || []).slice(0, Math.max(limit, ASK_REFS_PAGE_SIZE));
+    }
   }
 
   function askFallbackAnswer_(q, refs) {
@@ -4576,6 +4612,10 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
     // Ask dotdock interactions
     if (askFab && askOverlay) {
       askFab.addEventListener("click", () => {
+        if (state.authEnabled && !state.authUser) {
+          openAuthModal_();
+          return;
+        }
         askOverlay.classList.remove("hidden");
         if (askInput) askInput.focus();
       });
@@ -4592,12 +4632,20 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
     async function askSubmit_() {
       const q = String(askInput?.value || "").trim();
       if (!q) return;
+      if (state.authEnabled && !state.authUser) {
+        if (askHint) askHint.textContent = "Please sign in to use Ask dotdock.";
+        openAuthModal_();
+        return;
+      }
       if (askSend) askSend.disabled = true;
       if (askHint) askHint.textContent = "Searching repository…";
       if (askIntro) askIntro.classList.add("hidden");
       try {
         const totalScanned = Array.isArray(state.allItems) ? state.allItems.length : 0;
-        const pool = askBuildReferencePool_(q, state.allItems || []);
+        const lexicalPool = askBuildReferencePool_(q, state.allItems || []);
+        const aiTop = await askRerankPoolByAi_(q, lexicalPool, ASK_REFS_PAGE_SIZE);
+        const aiTopIds = new Set(aiTop.map(x => String(x.id)));
+        const pool = aiTop.concat(lexicalPool.filter(x => !aiTopIds.has(String(x.id))));
         const refs = pool.slice(0, ASK_REFS_PAGE_SIZE);
         const pendingId = askRenderThinking_(q, refs, totalScanned);
         let answer = "";

@@ -2956,15 +2956,40 @@ function formatAgo(ts) {
   return `${day}d ago`;
 }
 
+function itemActivityTs_(it) {
+  if (!it || typeof it !== "object") return 0;
+  const a = Number(it.addedAt || 0) || 0;
+  const m = Number(it.modified || 0) || 0;
+  return Math.max(a, m);
+}
+
 function catalogMaxTimestamp_(items) {
   let newest = 0;
   for (const it of (items || [])) {
-    const a = Number((it && it.addedAt) || 0) || 0;
-    const m = Number((it && it.modified) || 0) || 0;
-    const v = Math.max(a, m);
+    const v = itemActivityTs_(it);
     if (v > newest) newest = v;
   }
   return newest;
+}
+
+// Stable content signature used for refresh detection across browsers.
+// Includes id + activity timestamp so a replaced item is detected even when
+// total length stays the same.
+function catalogSignature_(items) {
+  const arr = Array.isArray(items) ? items : [];
+  let newest = 0;
+  let hash = 2166136261; // FNV-1a basis
+  for (const it of arr) {
+    const id = String((it && it.id) || "");
+    const ts = itemActivityTs_(it);
+    if (ts > newest) newest = ts;
+    const token = `${id}:${ts}|`;
+    for (let i = 0; i < token.length; i += 1) {
+      hash ^= token.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+  }
+  return `${arr.length}|${newest}|${hash >>> 0}`;
 }
 
 function setLiveHeaderStatus({ updatedAt, newCount }) {
@@ -3001,7 +3026,7 @@ function computeNewCountSinceLastVisit(items, commit = true) {
   let newCount = 0;
 
   for (const it of (items || [])) {
-    const m = Number(it.addedAt || it.modified || 0) || 0;
+    const m = itemActivityTs_(it);
     if (m > newest) newest = m;
     if (lastSeenMax && m > lastSeenMax) newCount += 1;
   }
@@ -3030,7 +3055,7 @@ function computeNewMarkers_(items) {
   const set = new Set();
   let newest = 0;
   for (const it of (items || [])) {
-    const m = Number(it.addedAt || it.modified || 0) || 0;
+    const m = itemActivityTs_(it);
     if (m > newest) newest = m;
     if (baseline && m > baseline) set.add(String(it.id));
   }
@@ -3726,17 +3751,15 @@ setInterval(() => {
   if (ts) setLiveHeaderStatus({ updatedAt: ts, newCount: nc }); // preserve "ago" + "new"
 }, 30000);
     
-const AUTO_REFRESH_MS = 60 * 1000;
+const AUTO_REFRESH_MS = 30 * 1000;
 let _refreshInFlight = false;
 async function refreshCatalogInBackground_(notify = true) {
   if (_refreshInFlight) return;
   _refreshInFlight = true;
   try {
     const data = prepareItems(await loadData(true));
-    // quick change detection: length + newest modified
-    const sig = (arr) => `${arr.length}|${Math.max(...arr.map(x => x.modified || 0))}`;
-
-    if (sig(data) !== sig(state.allItems || [])) {
+    // robust change detection: length + content hash + activity timestamp
+    if (catalogSignature_(data) !== catalogSignature_(state.allItems || [])) {
       state.allItems = data;
       cacheSet(data);
       const { newCount } = computeNewMarkers_(data);
@@ -4540,8 +4563,7 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
     setTimeout(async () => {
       try {
         const fresh = prepareItems(await loadData(true));
-        const sig = (arr) => `${arr.length}|${Math.max(...arr.map(x => x.modified || 0))}`;
-        if (sig(fresh) === sig(state.allItems || [])) return;
+        if (catalogSignature_(fresh) === catalogSignature_(state.allItems || [])) return;
 
         state.allItems = fresh;
         cacheSet(fresh);

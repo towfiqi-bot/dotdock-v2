@@ -383,10 +383,6 @@
             </button>
             </div>
             <div class="flex items-center gap-2 justify-end sm:justify-start">
-            <button id="aiModeBtn" type="button" aria-pressed="false"
-                    class="shrink-0 px-3 py-2 text-xs font-semibold rounded-full border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">
-              AI Mode
-            </button>
             <button id="searchBtn"
                     class="shrink-0 px-5 py-2 text-sm font-semibold uppercase tracking-wide bg-amber-600 text-white rounded-full hover:bg-amber-700">
               Search
@@ -398,7 +394,6 @@
         </div>
           <p class="mt-2 text-xs text-gray-500 text-center">
             Instant search across <span class="font-semibold">title</span> + <span class="font-semibold">summary</span> + <span class="font-semibold">tags</span>; PDF text search runs automatically after a short pause.
-            <span class="block mt-1">AI Mode gives quick, high-level answers—may be slower and not available for every report.</span>
           </p>
         </div>
       </div>
@@ -533,10 +528,6 @@
           <path d="M18 6L6 18"></path>
           <path d="M6 6l12 12"></path>
         </svg>
-      </button>
-      <button id="stickyAiModeBtn" type="button" aria-pressed="false"
-              class="shrink-0 px-2.5 py-1.5 text-[11px] font-semibold rounded-full border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">
-        AI
       </button>
       <button id="stickySearchBtn" type="button"
               class="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-full bg-amber-600 text-white hover:bg-amber-700">
@@ -823,7 +814,6 @@
     searchQuery: "",
     // Progressive In-PDF enrichment (background)
     inPdfMode: false,            // (legacy toggle; UI removed)
-    aiMode: false,
     inPdfIds: null,              // Set<string> of IDs matched inside PDFs for current query
     inPdfQueryKey: "",           // normalized query for inPdfIds
     inPdfSearching: false,       // true when queued or in-flight
@@ -988,6 +978,20 @@
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
     document.body.classList.add("modal-open");
+  }
+
+  function requireAuthForAction_(action, guardedActions = null) {
+    if (action === "auth_open") {
+      openAuthModal_();
+      return false;
+    }
+    const needsAuth = Array.isArray(guardedActions)
+      ? guardedActions.includes(action)
+      : true;
+    if (!needsAuth) return true;
+    if (state.authUser) return true;
+    openAuthModal_();
+    return false;
   }
 
   function closeAuthModal_() {
@@ -1393,7 +1397,7 @@ function commentsCountsCacheSet_(countsObj) {
     return data;
   }
 
-  // --------- In-PDF Search + AI Mode (A/B) ----------
+  // --------- In-PDF Search ----------
   async function remoteInPdfSearchIds_(q, limit = 60, signal) {
     const base = DATA_URL + (DATA_URL.includes("?") ? "&" : "?");
     const url = base +
@@ -2306,20 +2310,10 @@ const matchesTopic = state.selectedTopics.size === 0 || (() => {
     const likes = likeCount(item.id);
     const likeTitle = ENABLE_REMOTE_LIKES ? "Like" : "Like (saved in your browser)";
     const isNew = !!(state.newIds && state.newIds.has(String(item.id)));
-    const authLocked = !state.authUser;
 
     return `
       <article data-card-id="${escapeHtml(item.id)}" data-new="${isNew ? "1" : "0"}" class="relative overflow-hidden bg-white border ${isNew ? "border-red-200 ring-2 ring-red-100" : "border-gray-200"} rounded-lg p-4 shadow-sm hover:shadow transition">
-        ${authLocked ? `<div class="absolute inset-0 z-20 bg-white/65 backdrop-blur-[2px] flex items-center justify-center p-4">
-          <div class="text-center max-w-xs">
-            <div class="text-sm font-semibold text-gray-800">Please sign in to view full report cards.</div>
-            <button type="button" data-action="auth_open" data-id="${escapeHtml(item.id)}"
-                    class="mt-2 px-3 py-1.5 text-xs font-semibold border border-gray-300 rounded bg-white hover:bg-gray-50">
-              Sign in to continue
-            </button>
-          </div>
-        </div>` : ""}
-        <div class="${authLocked ? "blur-[2px] select-none" : ""}">
+        <div>
         <div class="grid grid-cols-1 sm:grid-cols-[160px,1fr] gap-4">
           <div class="w-full">
             <div class="relative border border-gray-200 bg-white rounded group">
@@ -3990,54 +3984,6 @@ window.addEventListener("online", () => { refreshCatalogInBackground_(false); })
         clearInPdfState_();
       }
 
-      // AI Mode: run AI rerank on demand (Search/Enter)
-      if (state.aiMode) {
-        try {
-          showToast("AI Mode: searching…");
-
-          // Candidate set from local strong search (title+summary+tags)
-          const parsed = parseQuery(q);
-          const scored = state.allItems
-            .map(it => ({ it, s: matchQuery(it, parsed) ? scoreQuery(it, parsed) : -9999 }))
-            .filter(x => x.s > -9999)
-            .sort((a,b) => b.s - a.s)
-            .slice(0, 50);
-
-          let candidates = scored.map(x => String(x.it.id));
-
-          // If we already have in-PDF hits for this query, expand candidates (best-effort)
-          const key = normalizeQueryKey_(q);
-          if (state.inPdfIds instanceof Set && state.inPdfQueryKey === key) {
-            const set = new Set(candidates);
-            for (const id of state.inPdfIds) {
-              if (!set.has(id)) { candidates.push(id); set.add(id); }
-            }
-          }
-
-          const out = await remoteAiSearchIds_(q, candidates, 30);
-
-          if (out.ok === true && Array.isArray(out.ids)) {
-            setOverrideResults_(out.ids, "AI Mode");
-            applyFilters();
-            return;
-          }
-
-          if (out && out.quota) {
-            showToast(out.message || "AI Mode daily limit reached.");
-          } else {
-            showToast(out.message || "AI Mode unavailable. Showing normal results.");
-          }
-          clearOverrideResults_();
-          applyFilters();
-          return;
-        } catch (e) {
-          showToast("AI Mode error. Showing normal results.");
-          clearOverrideResults_();
-          applyFilters();
-          return;
-        }
-      }
-
       // Normal mode: local results are already filtered live; just ensure UI is updated.
       clearOverrideResults_();
       applyFilters();
@@ -4052,7 +3998,7 @@ window.addEventListener("online", () => { refreshCatalogInBackground_(false); })
       // Always show local results instantly while typing (normalized for natural language queries)
       state.searchQuery = normalizeUserQueryForSearch_(searchInput.value.trim());
 
-      // While typing, show normal results (clear any AI override)
+      // While typing, show normal results (clear any override)
       if (state.overrideLabel) clearOverrideResults_();
 
       // New query -> clear old in-PDF hits
@@ -4126,11 +4072,9 @@ window.addEventListener("online", () => { refreshCatalogInBackground_(false); })
     syncSearchClearBtn();
 
 
-    // A/B search mode toggles
+    // Search mode toggle
     const inPdfBtn = document.getElementById("inPdfBtn");
-    const aiModeBtn = document.getElementById("aiModeBtn");
     const stickyInPdfBtn = document.getElementById("stickyInPdfBtn");
-    const stickyAiModeBtn = document.getElementById("stickyAiModeBtn");
 
     function styleToggle_(btn, on) {
       if (!btn) return;
@@ -4145,29 +4089,16 @@ window.addEventListener("online", () => { refreshCatalogInBackground_(false); })
     function syncModeUi_() {
       styleToggle_(inPdfBtn, state.inPdfMode);
       styleToggle_(stickyInPdfBtn, state.inPdfMode);
-      styleToggle_(aiModeBtn, state.aiMode);
-      styleToggle_(stickyAiModeBtn, state.aiMode);
     }
 
     function setInPdfMode_(on) {
       state.inPdfMode = !!on;
       if (!state.inPdfMode) {
-        // Only clear override if we were showing In-PDF results (AI has its own label)
+        // Only clear override if we were showing In-PDF results
         if (state.overrideLabel === "In-PDF") clearOverrideResults_();
       }
       syncModeUi_();
     }
-    function setAiMode_(on) {
-      state.aiMode = !!on;
-      if (!state.aiMode) {
-        if (state.overrideLabel === "AI Mode") clearOverrideResults_();
-      }
-      syncModeUi_();
-    }
-
-    if (aiModeBtn) aiModeBtn.addEventListener("click", () => { setAiMode_(!state.aiMode); });
-    if (stickyAiModeBtn) stickyAiModeBtn.addEventListener("click", () => { setAiMode_(!state.aiMode); });
-
     syncModeUi_();
 
     clearBtn.addEventListener("click", () => {
@@ -4437,16 +4368,7 @@ window.addEventListener("online", () => { refreshCatalogInBackground_(false); })
       const action = btn.getAttribute("data-action");
       const id = btn.getAttribute("data-id");
       if (!id) return;
-      const authLocked = !state.authUser;
-
-      if (action === "auth_open") {
-        openAuthModal_();
-        return;
-      }
-      if (authLocked) {
-        openAuthModal_();
-        return;
-      }
+      if (!requireAuthForAction_(action)) return;
 
       const item = state.allItems.find(x => String(x.id) === String(id));
 
@@ -4538,6 +4460,7 @@ window.addEventListener("online", () => { refreshCatalogInBackground_(false); })
       const action = btn.getAttribute("data-action");
       const id = btn.getAttribute("data-id");
       if (!id) return;
+      if (!requireAuthForAction_(action, ["modal", "compare"])) return;
       if (action === "modal") openPdfModalById(id);
       if (action === "reading") toggleReadingItem(id);
       if (action === "compare") toggleCompare(id);
@@ -4548,7 +4471,9 @@ window.addEventListener("online", () => { refreshCatalogInBackground_(false); })
       const btn = e.target.closest("[data-action='compare']");
       if (!btn) return;
       const id = btn.getAttribute("data-id");
-      if (id) toggleCompare(id);
+      if (!id) return;
+      if (!requireAuthForAction_("compare", ["compare"])) return;
+      toggleCompare(id);
     });
 
     // Instant-load cached data on Home to improve first paint.

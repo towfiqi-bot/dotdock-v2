@@ -88,10 +88,21 @@
     }
     .ask-fab .ask-fab-title { font-size: 24px; font-weight: 700; line-height: 1; }
     .ask-fab .ask-fab-sub { font-size: 11px; opacity: .9; letter-spacing: .04em; text-transform: uppercase; }
+    #backToTop {
+      right: max(12px, env(safe-area-inset-right));
+      bottom: max(12px, env(safe-area-inset-bottom));
+    }
+    /* Keep back-to-top visible above Ask FAB. */
+    body.has-ask-fab #backToTop {
+      bottom: calc(max(12px, env(safe-area-inset-bottom)) + 96px);
+    }
     @media (max-width: 768px) {
       .ask-fab { padding: 8px 12px; border-radius: 14px; right: 10px; bottom: 10px; max-width: 180px; }
       .ask-fab .ask-fab-title { font-size: 22px; }
       .ask-fab .ask-fab-sub { display: none; }
+      body.has-ask-fab #backToTop {
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 82px);
+      }
     }
 
 </style>
@@ -441,7 +452,7 @@
   </main>
 
   <button id="backToTop"
-          class="hidden fixed bottom-4 right-4 z-40 rounded-full bg-amber-600 text-white shadow-lg p-3 hover:bg-amber-700 transition">
+          class="hidden fixed z-40 rounded-full bg-amber-600 text-white shadow-lg p-3 hover:bg-amber-700 transition">
     ↑
   </button>
 
@@ -828,6 +839,8 @@
     liveUpdatesTimer: null,
     autoFillGuard: false,
     catalogLoading: true,
+    lastCatalogFetchAt: 0,
+    lastCatalogChangeAt: 0,
     authEnabled: false,
     authUser: null
   };
@@ -1631,12 +1644,14 @@ Output:
   }
 
   // --------- Data loading ----------
-  function withCb_(url) {
+  function withCb_(url, aggressive = false) {
     const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}cb=${Date.now()}`;
+    const nonce = Date.now() + "_" + Math.floor(Math.random() * 100000);
+    const extra = aggressive ? `&cache_fix=${encodeURIComponent(nonce)}` : "";
+    return `${url}${sep}cb=${encodeURIComponent(nonce)}${extra}`;
   }
 
-  async function loadData(forceFresh) {
+  async function loadData(forceFresh, aggressive = false) {
     if (!DATA_URL) {
       throw new Error("Catalog URL not configured. Set DOTDOCK_APP_CONFIG.dataUrl in app-config.js.");
     }
@@ -1644,7 +1659,7 @@ Output:
       const cached = cacheGet();
       if (cached) return cached;
     }
-    const url = forceFresh ? withCb_(DATA_URL) : DATA_URL;
+    const url = forceFresh ? withCb_(DATA_URL, aggressive) : DATA_URL;
     const timeoutMs = forceFresh ? 35000 : 25000;
     let json;
     try {
@@ -3751,16 +3766,20 @@ setInterval(() => {
   if (ts) setLiveHeaderStatus({ updatedAt: ts, newCount: nc }); // preserve "ago" + "new"
 }, 30000);
     
-const AUTO_REFRESH_MS = 30 * 1000;
+const AUTO_REFRESH_MS = 20 * 1000;
 let _refreshInFlight = false;
 async function refreshCatalogInBackground_(notify = true) {
   if (_refreshInFlight) return;
   _refreshInFlight = true;
   try {
-    const data = prepareItems(await loadData(true));
+    const staleForMs = state.lastCatalogFetchAt ? (Date.now() - state.lastCatalogFetchAt) : Number.POSITIVE_INFINITY;
+    const aggressive = staleForMs >= (2 * 60 * 1000);
+    const data = prepareItems(await loadData(true, aggressive));
+    state.lastCatalogFetchAt = Date.now();
     // robust change detection: length + content hash + activity timestamp
     if (catalogSignature_(data) !== catalogSignature_(state.allItems || [])) {
       state.allItems = data;
+      state.lastCatalogChangeAt = Date.now();
       cacheSet(data);
       const { newCount } = computeNewMarkers_(data);
       setLiveHeaderStatus({ updatedAt: catalogMaxTimestamp_(data), newCount });
@@ -3782,6 +3801,7 @@ setInterval(() => { refreshCatalogInBackground_(true); }, AUTO_REFRESH_MS);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") refreshCatalogInBackground_(false);
 });
+window.addEventListener("online", () => { refreshCatalogInBackground_(false); });
 
     const catSection = document.getElementById("categoryFilterSection");
     if (!ENABLE_CATEGORY_FILTER && catSection) {
@@ -4507,6 +4527,8 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
       const data = prepareItems(await loadData(false));
       state.allItems = data;
       state.catalogLoading = false;
+      state.lastCatalogFetchAt = Date.now();
+      state.lastCatalogChangeAt = Date.now();
       cacheSet(data);
       buildFacetFilters();
       refreshSearchSuggestData();
@@ -4534,6 +4556,8 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
             const retry = prepareItems(await loadData(true));
             state.allItems = retry;
             state.catalogLoading = false;
+            state.lastCatalogFetchAt = Date.now();
+            state.lastCatalogChangeAt = Date.now();
             cacheSet(retry);
             buildFacetFilters();
             refreshSearchSuggestData();
@@ -4566,6 +4590,8 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
         if (catalogSignature_(fresh) === catalogSignature_(state.allItems || [])) return;
 
         state.allItems = fresh;
+        state.lastCatalogFetchAt = Date.now();
+        state.lastCatalogChangeAt = Date.now();
         cacheSet(fresh);
         buildFacetFilters();
         refreshSearchSuggestData();
@@ -4595,6 +4621,7 @@ remoteCommentsPrime_({ useCache: true }).catch(() => {});
 
 
     // Ask dotdock interactions
+    document.body.classList.toggle("has-ask-fab", !!askFab);
     if (askFab && askOverlay) {
       askFab.addEventListener("click", () => {
         if (state.authEnabled && !state.authUser) {

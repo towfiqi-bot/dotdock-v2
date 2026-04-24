@@ -14,6 +14,28 @@
   <style>
     body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; }
     .brand-title { font-family: 'Playfair Display', serif; letter-spacing: 0.03em; }
+    .site-logo-link { display: inline-flex; align-items: center; }
+    .site-logo-frame {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 52px;
+      max-width: min(52vw, 360px);
+      padding: 6px 12px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid #e5e7eb;
+    }
+    .site-logo-img {
+      display: block;
+      max-height: 100%;
+      width: auto;
+      max-width: 100%;
+      object-fit: contain;
+    }
+    @media (min-width: 768px) {
+      .site-logo-frame { height: 62px; padding: 8px 14px; }
+    }
     /* Temporary UI mask to block Drive pop-out hotspot in embedded preview */
     .pdf-popout-mask {
       position: absolute;
@@ -32,9 +54,10 @@
     <div class="max-w-6xl mx-auto px-4 py-3">
       <div class="flex flex-col md:flex-row md:items-center gap-3">
         <div class="flex items-center gap-4">
-          <a href="index.html" class="block" aria-label="Back to catalog">
-            <img src="logo.png" alt="dotdock logo"
-                 class="h-10 md:h-12 w-auto max-w-[220px] md:max-w-[320px] object-contain">
+          <a href="index.html" class="site-logo-link" aria-label="Back to catalog">
+            <span class="site-logo-frame">
+              <img src="logo.png" alt="dotdock logo" class="site-logo-img">
+            </span>
           </a>
           <span class="text-xs text-gray-500 font-semibold uppercase tracking-[0.14em]">Viewer</span>
         </div>

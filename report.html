@@ -18,6 +18,28 @@
     body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; }
     .brand-title { font-family: 'Playfair Display', serif; letter-spacing: 0.03em; }
     .brand-tagline { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; }
+    .site-logo-link { display: inline-flex; align-items: center; }
+    .site-logo-frame {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 58px;
+      max-width: min(52vw, 430px);
+      padding: 6px 12px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid #e5e7eb;
+    }
+    .site-logo-img {
+      display: block;
+      max-height: 100%;
+      width: auto;
+      max-width: 100%;
+      object-fit: contain;
+    }
+    @media (min-width: 768px) {
+      .site-logo-frame { height: 70px; padding: 8px 14px; }
+    }
     /* Temporary UI mask to block Drive pop-out hotspot in embedded preview */
     .pdf-popout-mask {
       position: absolute;
@@ -37,9 +59,10 @@
   <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
     <div class="max-w-[1600px] mx-auto px-4 py-4">
       <div class="flex items-center justify-between gap-4">
-        <a href="index.html" class="block shrink-0" aria-label="Back to catalog">
-          <img src="logo.png" alt="dotdock logo"
-               class="h-12 md:h-16 w-auto max-w-[260px] md:max-w-[420px] object-contain">
+        <a href="index.html" class="site-logo-link shrink-0" aria-label="Back to catalog">
+          <span class="site-logo-frame">
+            <img src="logo.png" alt="dotdock logo" class="site-logo-img">
+          </span>
         </a>
         <div class="min-w-0 flex-1">
           <p class="text-xs text-gray-500 tracking-[0.14em] uppercase">Report</p>

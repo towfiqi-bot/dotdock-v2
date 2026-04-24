@@ -14,14 +14,14 @@
     body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     .brand-title { font-family: 'Playfair Display', serif; letter-spacing: 0.03em; }
     .brand-tagline { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; }
-    .site-logo-link { display: inline-flex; align-items: center; }
+    .site-logo-link { display: inline-flex; align-items: center; justify-content: flex-start; flex-shrink: 0; }
     .site-logo-frame {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: 58px;
-      max-width: min(52vw, 430px);
-      padding: 6px 12px;
+      height: 72px;
+      max-width: min(62vw, 560px);
+      padding: 4px 10px;
       border-radius: 14px;
       background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
       border: 1px solid #e5e7eb;
@@ -34,7 +34,7 @@
       object-fit: contain;
     }
     @media (min-width: 768px) {
-      .site-logo-frame { height: 70px; padding: 8px 14px; }
+      .site-logo-frame { height: 92px; padding: 6px 12px; }
     }
     /* Help dropdown */
     .dd-shadow { box-shadow: 0 12px 30px rgba(0,0,0,0.10); }
@@ -103,12 +103,12 @@
       max-width: 220px;
     }
     .ask-fab .ask-fab-icon {
-      width: 30px; height: 30px; border-radius: 999px;
+      width: 26px; height: 26px; border-radius: 999px;
       background: rgba(255,255,255,0.18);
       display: inline-flex; align-items: center; justify-content: center;
-      font-size: 16px; line-height: 1;
+      font-size: 14px; line-height: 1;
     }
-    .ask-fab .ask-fab-title { font-size: 24px; font-weight: 700; line-height: 1; }
+    .ask-fab .ask-fab-title { font-size: 20px; font-weight: 700; line-height: 1; }
     .ask-fab .ask-fab-sub { font-size: 11px; opacity: .9; letter-spacing: .04em; text-transform: uppercase; }
     #backToTop {
       right: max(12px, env(safe-area-inset-right));
@@ -120,7 +120,7 @@
     }
     @media (max-width: 768px) {
       .ask-fab { padding: 8px 12px; border-radius: 14px; right: 10px; bottom: 10px; max-width: 180px; }
-      .ask-fab .ask-fab-title { font-size: 22px; }
+      .ask-fab .ask-fab-title { font-size: 18px; }
       .ask-fab .ask-fab-sub { display: none; }
       body.has-ask-fab #backToTop {
         bottom: calc(max(10px, env(safe-area-inset-bottom)) + 82px);
@@ -135,7 +135,7 @@
   <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
     <div class="max-w-[1600px] mx-auto px-4 py-4">
       <div class="flex flex-col gap-3">
-        <div class="flex items-center gap-4">
+        <div class="flex items-start gap-4">
           <a href="index.html" class="site-logo-link" aria-label="Back to top">
             <span class="site-logo-frame">
               <img src="logo.png"
@@ -146,13 +146,7 @@
           </a>
 
           <div class="flex-1">
-            <div class="flex flex-col md:flex-row md:items-baseline md:justify-between gap-2">
-              <div id="headerBrandText" class="min-w-0">
-                <div class="text-2xl md:text-4xl font-semibold text-gray-900 tracking-tight leading-none">dotdock</div>
-                <p class="brand-tagline mt-2 text-amber-600 text-sm md:text-base font-semibold italic tracking-[0.02em]">
-                  Connecting the dots for curious minds
-                </p>
-              </div>
+            <div class="flex justify-end">
               <!-- Top menu -->
               <div class="flex flex-col items-end gap-1">
                 <div id="authHeaderBox" class="w-full flex flex-wrap items-center justify-end gap-2 text-[11px] text-gray-600 mb-1">
@@ -161,7 +155,7 @@
                   <button id="authLogoutBtn" type="button" class="hidden px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50">Logout</button>
                 </div>
 
-                <nav class="flex items-center gap-5 text-sm font-medium text-gray-700">
+                <nav class="flex items-center gap-5 text-base font-medium text-gray-700">
                   <a id="navHome" href="index.html" class="hover:text-amber-700">Home</a>
                   <a id="navToday" href="index.html?tab=today" class="hover:text-amber-700">Added Today</a>
 
@@ -888,20 +882,6 @@
     clearTimeout(showToast._to);
     showToast._to = setTimeout(() => t.classList.add("hidden"), 2200);
   }
-
-  // Keep header aesthetics stable for both square-icon and wide-wordmark logo files.
-  function syncHeaderBrandingLayout_() {
-    const logo = document.getElementById("headerLogoImg");
-    const text = document.getElementById("headerBrandText");
-    if (!logo || !text) return;
-    const ratio = (Number(logo.naturalWidth || 0) > 0 && Number(logo.naturalHeight || 0) > 0)
-      ? (logo.naturalWidth / logo.naturalHeight)
-      : 0;
-    // If logo is already a wide wordmark, hide duplicate text block.
-    const isWideWordmark = ratio >= 2.2;
-    text.classList.toggle("hidden", isWideWordmark);
-  }
-  window.addEventListener("load", syncHeaderBrandingLayout_);
 
   window.addEventListener("error", (ev) => {
     const info = document.getElementById("resultsInfo");

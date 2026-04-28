@@ -16,14 +16,14 @@
   <style>
     body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; }
     .brand-title { font-family: 'Playfair Display', serif; letter-spacing: 0.03em; }
-    .site-logo-link { display: inline-flex; align-items: center; }
+    .site-logo-link { display: inline-flex; align-items: center; justify-content: flex-start; flex-shrink: 0; }
     .site-logo-frame {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: 58px;
-      max-width: min(52vw, 430px);
-      padding: 6px 12px;
+      height: 68px;
+      max-width: min(62vw, 560px);
+      padding: 4px 10px;
       border-radius: 14px;
       background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
       border: 1px solid #e5e7eb;
@@ -36,7 +36,7 @@
       object-fit: contain;
     }
     @media (min-width: 768px) {
-      .site-logo-frame { height: 70px; padding: 8px 14px; }
+      .site-logo-frame { height: 88px; padding: 6px 12px; }
     }
   
     /* Bigger reading area */
